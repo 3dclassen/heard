@@ -15,7 +15,6 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
   serverTimestamp,
   writeBatch,
   enableIndexedDbPersistence
@@ -91,22 +90,25 @@ export async function getUserProfile(uid) {
 }
 
 export function onUsersChange(callback) {
-  return onSnapshot(collection(db, 'users'), snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  return onSnapshot(collection(db, 'users'),
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    err  => console.error('[firebase] onUsersChange Fehler:', err.code, err.message)
+  );
 }
 
 // ── Artists ──
 
 export function onArtistsChange(festivalId, callback) {
+  // Kein orderBy — würde einen zusammengesetzten Firestore-Index erfordern.
+  // Sortierung läuft client-seitig in app.js (sortArtists).
   const q = query(
     collection(db, 'artists'),
-    where('festival_id', '==', festivalId),
-    orderBy('name')
+    where('festival_id', '==', festivalId)
   );
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    err  => console.error('[firebase] onArtistsChange Fehler:', err.code, err.message)
+  );
 }
 
 export async function addArtist(data) {
@@ -141,9 +143,10 @@ export function ratingId(userId, artistId) {
 
 export function onRatingsChange(festivalId, callback) {
   const q = query(collection(db, 'ratings'), where('festival_id', '==', festivalId));
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    err  => console.error('[firebase] onRatingsChange Fehler:', err.code, err.message)
+  );
 }
 
 export async function saveRating({ userId, artistId, festivalId, rating, comment, listened, want_to_see }) {
