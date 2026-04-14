@@ -82,7 +82,15 @@
         </div>
       </div>
 
-      <div class="artist-count" id="artist-count"></div>
+      <div class="artist-count" id="artist-count">
+        <span id="artist-count-text"></span>
+        <div class="sort-controls">
+          <button class="sort-btn active" data-sort="name-asc" title="A → Z">A↑</button>
+          <button class="sort-btn" data-sort="name-desc" title="Z → A">A↓</button>
+          <button class="sort-btn" data-sort="rating-desc" title="Höchste Bewertung zuerst">★↓</button>
+          <button class="sort-btn" data-sort="rating-asc" title="Niedrigste Bewertung zuerst">★↑</button>
+        </div>
+      </div>
       <div class="artist-list" id="artist-list">
         <div class="loader"><div class="spinner"></div> Lade Artists...</div>
       </div>

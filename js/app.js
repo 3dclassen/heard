@@ -32,6 +32,7 @@ let state = {
   filterStage:  'all',
   filterStatus: 'all',
   searchQuery:  '',
+  sortBy:       'name-asc',
   openArtist:   null,  // aktuell geöffneter Artist im Panel
   unsubscribers: []
 };
@@ -195,6 +196,15 @@ document.querySelectorAll('[data-status]').forEach(btn => {
   });
 });
 
+document.querySelectorAll('[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.sortBy = btn.dataset.sort;
+    document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
 // ── Render ──
 
 function getMyRating(artistId) {
@@ -207,7 +217,7 @@ function getArtistRatings(artistId) {
 }
 
 function filteredArtists() {
-  return state.artists.filter(a => {
+  const filtered = state.artists.filter(a => {
     if (state.filterStage !== 'all' && a.stage !== state.filterStage) return false;
 
     if (state.filterStatus !== 'all') {
@@ -224,11 +234,30 @@ function filteredArtists() {
 
     return true;
   });
+
+  return sortArtists(filtered);
+}
+
+function sortArtists(artists) {
+  const copy = [...artists];
+  switch (state.sortBy) {
+    case 'name-asc':
+      return copy.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    case 'name-desc':
+      return copy.sort((a, b) => b.name.localeCompare(a.name, 'de'));
+    case 'rating-desc':
+      return copy.sort((a, b) => (getMyRating(b.id)?.rating || 0) - (getMyRating(a.id)?.rating || 0));
+    case 'rating-asc':
+      return copy.sort((a, b) => (getMyRating(a.id)?.rating || 0) - (getMyRating(b.id)?.rating || 0));
+    default:
+      return copy;
+  }
 }
 
 function render() {
   const artists = filteredArtists();
-  artistCount.textContent = `${artists.length} Artists`;
+  const countEl = document.getElementById('artist-count-text');
+  if (countEl) countEl.textContent = `${artists.length} Artists`;
 
   if (artists.length === 0) {
     artistList.innerHTML = `
