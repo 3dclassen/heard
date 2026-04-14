@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HEARD">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>HEARD — Mein Timetable</title>
+</head>
+<body>
+
+  <div id="app-shell" class="visible">
+    <div class="offline-banner" id="offline-banner"></div>
+
+    <nav class="nav">
+      <span class="nav-logo">HEAR<span>D</span></span>
+      <div class="nav-links">
+        <a href="./index.html"     class="nav-link">Artists</a>
+        <a href="./timetable.html" class="nav-link active">Timetable</a>
+        <a href="./crew.html"      class="nav-link">Crew</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+      </div>
+      <div class="nav-avatar" id="nav-avatar">
+        <img id="nav-avatar-img" src="" alt="Avatar">
+      </div>
+    </nav>
+
+    <main class="main">
+      <h1 class="page-title">Mein Timetable</h1>
+      <div id="timetable-content">
+        <div class="loader"><div class="spinner"></div> Lade...</div>
+      </div>
+    </main>
+
+    <button id="btn-logout" style="display:none"></button>
+  </div>
+
+  <script type="module" src="./js/timetable.js"></script>
+</body>
+</html>

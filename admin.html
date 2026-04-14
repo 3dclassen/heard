@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a10">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>HEARD — Admin</title>
+</head>
+<body>
+
+  <div id="app-shell" class="visible">
+
+    <nav class="nav">
+      <span class="nav-logo">HEAR<span>D</span></span>
+      <div class="nav-links">
+        <a href="./index.html"     class="nav-link">Artists</a>
+        <a href="./timetable.html" class="nav-link">Timetable</a>
+        <a href="./crew.html"      class="nav-link">Crew</a>
+        <a href="./admin.html"     class="nav-link active">Admin</a>
+      </div>
+      <div class="nav-avatar" id="nav-avatar">
+        <img id="nav-avatar-img" src="" alt="Avatar">
+      </div>
+    </nav>
+
+    <main class="main">
+      <h1 class="page-title">Admin-Bereich</h1>
+
+      <!-- ── Festival ── -->
+      <div class="admin-section">
+        <div class="admin-section-title">Festival</div>
+        <p id="festival-info" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem">Lade...</p>
+        <div class="input-group">
+          <label>Festival-Name</label>
+          <input type="text" id="input-festival-name" class="text-input" placeholder="MODEM 2026" value="MODEM 2026">
+        </div>
+        <div class="input-group">
+          <label>Ort</label>
+          <input type="text" id="input-festival-location" class="text-input" placeholder="Kroatien" value="Kroatien">
+        </div>
+        <button class="btn-primary" id="btn-save-festival">Festival speichern / anlegen</button>
+        <p style="color:var(--text-muted);font-size:0.75rem;margin-top:0.5rem">
+          Festival-ID ist fest auf <code style="background:var(--bg-surface);padding:0.1rem 0.3rem;border-radius:3px">modem-2026</code> gesetzt.
+        </p>
+      </div>
+
+      <!-- ── Artists ── -->
+      <div class="admin-section">
+        <div class="admin-section-title">Artists <span id="artist-count-admin" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+
+        <!-- Manuell hinzufügen -->
+        <form id="form-add-artist" style="margin-bottom:1.25rem">
+          <div class="input-group">
+            <label>Artistname</label>
+            <input type="text" id="input-artist-name" class="text-input" placeholder="z.B. GRUB" required>
+          </div>
+          <div class="input-group">
+            <label>Stage</label>
+            <select id="input-artist-stage" class="select-input" required>
+              <option value="">Stage wählen...</option>
+              <option value="hive">The Hive</option>
+              <option value="swamp">The Swamp</option>
+              <option value="seed">The Seed</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>SoundCloud URL (optional)</label>
+            <input type="url" id="input-artist-sc" class="text-input" placeholder="https://soundcloud.com/...">
+          </div>
+          <button type="submit" class="btn-primary">Artist hinzufügen</button>
+        </form>
+
+        <!-- JSON-Import (vom Scraper) -->
+        <div style="margin-bottom:1.25rem">
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">
+            JSON-Import (Ausgabe des Scrapers einfügen):
+          </p>
+          <textarea id="json-import-input" class="comment-textarea" style="min-height:100px;font-family:monospace;font-size:0.75rem" placeholder='[{"name":"GRUB","stage":"hive","soundcloud_url":"https://..."}]'></textarea>
+          <button class="btn-primary" id="btn-import-json" style="margin-top:0.5rem">JSON importieren</button>
+        </div>
+
+        <!-- Artist-Tabelle -->
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Stage</th>
+                <th>SoundCloud</th>
+                <th>Zeit</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="artist-table-body">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Lade...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── User ── -->
+      <div class="admin-section">
+        <div class="admin-section-title">Nutzer*innen</div>
+        <div style="overflow-x:auto">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>E-Mail</th>
+                <th>Rolle</th>
+              </tr>
+            </thead>
+            <tbody id="user-table-body">
+              <tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Lade...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <button id="btn-logout" style="display:none"></button>
+  </div>
+
+  <script type="module" src="./js/admin.js"></script>
+</body>
+</html>

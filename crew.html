@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HEARD">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>HEARD — Crew</title>
+</head>
+<body>
+
+  <div id="app-shell" class="visible">
+    <div class="offline-banner" id="offline-banner"></div>
+
+    <nav class="nav">
+      <span class="nav-logo">HEAR<span>D</span></span>
+      <div class="nav-links">
+        <a href="./index.html"     class="nav-link">Artists</a>
+        <a href="./timetable.html" class="nav-link">Timetable</a>
+        <a href="./crew.html"      class="nav-link active">Crew</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+      </div>
+      <div class="nav-avatar" id="nav-avatar">
+        <img id="nav-avatar-img" src="" alt="Avatar">
+      </div>
+    </nav>
+
+    <main class="main">
+      <h1 class="page-title">Crew</h1>
+
+      <!-- Crew-Übersicht -->
+      <div id="crew-members" class="crew-grid"></div>
+
+      <!-- Gemeinsame Favoriten -->
+      <div id="shared-section" style="display:none">
+        <h2 style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;padding-top:0.5rem;border-top:1px solid var(--border)">
+          Alle wollen sehen 🔥
+        </h2>
+        <div id="shared-favorites" class="artist-list"></div>
+      </div>
+
+      <!-- Artist-Liste mit Crew-Ratings -->
+      <div style="margin-top:1.5rem">
+        <h2 style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;border-top:1px solid var(--border);padding-top:0.5rem">
+          Alle Artists — Crew-Vergleich
+        </h2>
+        <div id="crew-artist-list" class="artist-list">
+          <div class="loader"><div class="spinner"></div> Lade...</div>
+        </div>
+      </div>
+    </main>
+
+    <button id="btn-logout" style="display:none"></button>
+  </div>
+
+  <script type="module">
+    import {
+      auth, onAuthChange, ensureUserProfile, logout,
+      onArtistsChange, onRatingsChange, onUsersChange
+    } from './js/firebase.js';
+    import { getCachedArtists, getCachedRatings, getCachedUsers, isOnline } from './js/sync.js';
+    import { sharedFavorites, ratingProgress } from './js/rating.js';
+
+    const FESTIVAL_ID = 'modem-2026';
+    let state = { user: null, artists: [], ratings: [], users: [] };
+    const $ = id => document.getElementById(id);
+
+    onAuthChange(async user => {
+      if (!user) { window.location.href = './index.html'; return; }
+      state.user = user;
+      await ensureUserProfile(user);
+      const img = $('nav-avatar-img');
+      if (img && user.photoURL) img.src = user.photoURL;
+      $('btn-logout').addEventListener('click', logout);
+
+      if (!isOnline()) {
+        state.artists = getCachedArtists();
+        state.ratings = getCachedRatings();
+        state.users   = getCachedUsers();
+        render();
+        return;
+      }
+      onArtistsChange(FESTIVAL_ID, a => { state.artists = a; render(); });
+      onRatingsChange(FESTIVAL_ID, r => { state.ratings = r; render(); });
+      onUsersChange(u => { state.users = u; render(); });
+    });
+
+    function render() {
+      renderCrewMembers();
+      renderSharedFavorites();
+      renderCrewArtistList();
+    }
+
+    function renderCrewMembers() {
+      const el = $('crew-members');
+      if (!el) return;
+      el.innerHTML = state.users.map(u => {
+        const prog = ratingProgress(state.ratings, state.artists, u.uid);
+        return `
+          <div class="crew-member-card">
+            ${u.photo_url
+              ? `<img class="crew-member-avatar" src="${esc(u.photo_url)}" alt="">`
+              : `<div class="crew-member-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem">${(u.display_name||'?')[0]}</div>`}
+            <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}</div>
+            <div class="crew-member-stats">${prog.rated}/${prog.total} bewertet</div>
+            <div class="crew-member-stats">${prog.heard} reingehört</div>
+          </div>`;
+      }).join('') || '<p style="color:var(--text-muted)">Noch niemand eingeloggt.</p>';
+    }
+
+    function renderSharedFavorites() {
+      const userIds = state.users.map(u => u.uid);
+      const shared  = sharedFavorites(state.ratings, state.artists, userIds);
+      const section = $('shared-section');
+      const el      = $('shared-favorites');
+      if (!el || !section) return;
+
+      if (shared.length === 0) { section.style.display = 'none'; return; }
+      section.style.display = '';
+
+      el.innerHTML = shared.map(a => `
+        <div class="artist-card" style="cursor:default">
+          <div class="artist-name">${esc(a.name)}</div>
+          <div class="artist-meta">
+            <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
+          </div>
+          <div class="card-right">
+            <span style="color:var(--seed);font-size:1rem">♥ ♥ ♥</span>
+          </div>
+        </div>`).join('');
+    }
+
+    function renderCrewArtistList() {
+      const el = $('crew-artist-list');
+      if (!el) return;
+      if (state.artists.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>Noch keine Artists geladen.</p></div>';
+        return;
+      }
+
+      el.innerHTML = state.artists.map(a => {
+        const artistRatings = state.ratings.filter(r => r.artist_id === a.id);
+        const crewHtml = state.users.map(u => {
+          const r = artistRatings.find(r => r.user_id === u.uid);
+          const name = (u.display_name || '?').split(' ')[0];
+          return `
+            <div class="crew-rating-row">
+              <div class="crew-avatar" style="font-size:0.7rem;display:flex;align-items:center;justify-content:center">
+                ${u.photo_url ? `<img src="${esc(u.photo_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : name[0]}
+              </div>
+              <span class="crew-name">${esc(name)}</span>
+              <div class="crew-stars">
+                ${[1,2,3,4,5].map(i => `<span class="star ${i <= (r?.rating||0) ? 'filled' : ''}">★</span>`).join('')}
+              </div>
+              ${r?.want_to_see ? '<span style="color:var(--seed);font-size:0.8rem">♥</span>' : ''}
+            </div>`;
+        }).join('');
+
+        return `
+          <div class="artist-card" style="cursor:default;flex-direction:column;align-items:flex-start;gap:0.75rem">
+            <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+              <span class="artist-name">${esc(a.name)}</span>
+              <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
+            </div>
+            <div class="crew-ratings">${crewHtml}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function stageLabel(s) {
+      return { hive:'The Hive', swamp:'The Swamp', seed:'The Seed' }[s] || s;
+    }
+    function esc(str) {
+      return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
