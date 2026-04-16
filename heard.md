@@ -1,9 +1,9 @@
 # HEARD (Festival Buddy) — Product Requirements Document
 
-**Version:** 0.1 (Prototyp MODEM 2026)
+**Version:** 0.2 (Prototyp MODEM 2026)
 **Stand:** April 2026
 **Autor:** Daniel Classen
-**Status:** Konzeptphase
+**Status:** Prototyp live — Sprint 1–3 abgeschlossen
 
 > **PRD** steht für **Product Requirements Document** — das Pflichtenheft vor dem ersten Code.
 > Es beschreibt was gebaut wird, warum, für wen und wie — damit beim Entwickeln keine
@@ -89,7 +89,26 @@ nächsten Internet-Kontakt synchronisiert.
 | `want_to_see` | boolean   | nein    | Im Timetable merken                  |
 | `updated_at`  | timestamp | ja      | Auto                                 |
 
-### 5.3 Festival
+### 5.3 CrewInvite
+
+| Feld          | Typ       | Pflicht | Beschreibung                                        |
+| ------------- | --------- | ------- | --------------------------------------------------- |
+| `id`          | string    | ja      | Der Code selbst (6 Zeichen, z.B. "AB3X7K")         |
+| `creator_uid` | string    | ja      | Firebase Auth UID des Einladenden                   |
+| `created_at`  | timestamp | ja      | Auto                                                |
+| `used`        | boolean   | ja      | true sobald der Code eingelöst wurde                |
+
+### 5.4 CrewConnection
+
+| Feld         | Typ       | Pflicht | Beschreibung                                         |
+| ------------ | --------- | ------- | ---------------------------------------------------- |
+| `id`         | string    | ja      | Auto (Firebase)                                      |
+| `members`    | array     | ja      | Zwei Firebase Auth UIDs — `[uid1, uid2]`             |
+| `created_at` | timestamp | ja      | Auto                                                 |
+
+Abfrage via `where('members', 'array-contains', uid)` — ein Query reicht für beide Richtungen.
+
+### 5.5 Festival
 
 | Feld          | Typ    | Pflicht | Beschreibung                 |
 | ------------- | ------ | ------- | ---------------------------- |
@@ -102,7 +121,7 @@ nächsten Internet-Kontakt synchronisiert.
 | `lineup_urls` | object | nein    | Stage → Scraper-URL          |
 | `created_by`  | string | ja      | Firebase Auth UID des Admins |
 
-### 5.4 User
+### 5.6 User
 
 | Feld           | Typ    | Pflicht | Beschreibung          |
 | -------------- | ------ | ------- | --------------------- |
@@ -140,11 +159,26 @@ nächsten Internet-Kontakt synchronisiert.
 - Freitext-Kommentar
 - Speichern landet sofort in Firebase und ist für alle sichtbar
 
-**Crew-Vergleich**
+**Crew-System**
 
-- Ansicht "Crew" zeigt alle Nutzer\*innen die eingeloggt sind
-- Pro Artist: wer hat wie viele Sterne gegeben (kleine Avatar-Icons mit Sternen)
-- Gemeinsame Favoriten werden hervorgehoben ("Alle 3 wollen das sehen!")
+- Crew wird via Invite-Code aufgebaut: User A generiert Code → schickt ihn per WhatsApp o.ä. → User B gibt Code ein → Verbindung ist bidirektional gespeichert (Firestore: `crew_invites` + `crew_connections`)
+- Code ist 6-stellig, alphanumerisch, ohne mehrdeutige Zeichen (kein 0/O, 1/I)
+- Jeder Code kann nur einmal eingelöst werden (`used: true`)
+
+**Crew-Vergleich (Ansicht "Crew")**
+
+- Zeigt nur verbundene Crew-Mitglieder — nicht alle App-User
+- Jedes Crew-Mitglied mit Avatar (Google-Foto oder Initialen), Fortschritt (bewertet / reingehört)
+- Eigenes Profil wird als "Du" hervorgehoben
+- Gemeinsame Favoriten aller Crew-Mitglieder werden separat hervorgehoben
+- Artist-Liste zeigt nur Artists die mind. ein Crew-Mitglied bewertet oder favorisiert hat
+- Pro Artist: Avatar + Name + Sterne + Favorit-Herz pro Crew-Mitglied
+
+**Artist-Karten (Hauptansicht)**
+
+- Single-Modus: Karten zeigen eigene Sterne + Avatar-Chips anderer User die bewertet haben
+- Avatar-Chip zeigt: Profilbild oder Initialen + Sternanzahl + Favorit-Herz
+- Im Crew-Modus (Crew-Seite): nur Crew-Ratings aggregiert
 
 **Persönlicher Timetable**
 
@@ -220,34 +254,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Festivals: jeder kann lesen, nur Admins schreiben
+    // Festivals: eingeloggte User lesen, nur Admins schreiben
     match /festivals/{festivalId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Artists: jeder eingeloggte User kann lesen, nur Admins schreiben
+    // Artists: eingeloggte User lesen, nur Admins schreiben
     match /artists/{artistId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Ratings: jeder kann lesen, jeder kann eigene Ratings schreiben
+    // Ratings: alle lesen, jeder kann eigene schreiben
     match /ratings/{ratingId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null &&
         request.resource.data.user_id == request.auth.uid;
     }
 
-    // Users: eigenes Profil lesen/schreiben, Admin liest alle
+    // Users: alle eingeloggten User können lesen (für Crew-Avatare etc.),
+    // jeder schreibt nur sein eigenes Profil
     match /users/{userId} {
-      allow read: if request.auth != null &&
-        (request.auth.uid == userId ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Crew-Einladungen: jeder eingeloggte User kann lesen (Code validieren),
+    // nur der Ersteller darf anlegen, jeder darf als "used" markieren
+    match /crew_invites/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.creator_uid == request.auth.uid;
+      allow update: if request.auth != null;
+    }
+
+    // Crew-Verbindungen: nur Mitglieder lesen, jeder eingeloggte User darf
+    // eine Verbindung anlegen sofern er selbst darin vorkommt
+    match /crew_connections/{connId} {
+      allow read: if request.auth != null &&
+        request.auth.uid in resource.data.members;
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.members;
+    }
+
   }
 }
 ```
@@ -280,7 +332,7 @@ service cloud.firestore {
 ## 10. Projektstruktur (GitHub Repository)
 
 ```
-festival-buddy/
+heard/
 ├── index.html          ← Haupt-App (Artist-Liste, Filter, Rating)
 ├── timetable.html      ← Persönlicher Timetable
 ├── crew.html           ← Crew-Vergleich
@@ -288,19 +340,21 @@ festival-buddy/
 ├── css/
 │   └── style.css       ← Dunkles Theme passend zum Festival-Vibe
 ├── js/
-│   ├── app.js          ← Hauptlogik, Routing, State
-│   ├── firebase.js     ← Firebase SDK, Auth, Firestore-Funktionen
-│   ├── rating.js       ← Rating-Logik, Kommentare
+│   ├── app.js          ← Hauptlogik, Filter, Sort, Rating-Panel, Avatar-Chips
+│   ├── firebase.js     ← Firebase SDK, Auth, Firestore-Funktionen, Crew-Funktionen
+│   ├── rating.js       ← Reine Berechnungen (avgRating, sharedFavorites, etc.)
 │   ├── timetable.js    ← Timetable-Generierung, Konflikt-Erkennung
+│   ├── crew.js         ← Crew-Seite: Invite-Flow, Verbindungen, Crew-Ratings
 │   ├── sync.js         ← Offline-Sync, localStorage Cache
 │   └── admin.js        ← Admin-Funktionen
 ├── scraper/
-│   ├── scrape-modem.js ← Node.js Script: MODEM-Seiten → Firebase
+│   ├── scrape-modem.js ← Node.js Script: MODEM-Seiten → Firebase (bereits ausgeführt)
 │   └── package.json
-├── sw.js               ← Service Worker (Offline-Caching)
+├── sw.js               ← Service Worker (Offline-Caching, heard-v2)
 ├── manifest.json       ← PWA Manifest
-├── icon-192.png
-├── icon-512.png
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
 └── README.md
 ```
 
@@ -344,27 +398,49 @@ festival-buddy/
 
 ## 13. Nächste Schritte
 
-| Schritt | Was                                                   | Wer             | Wann      |
-| ------- | ----------------------------------------------------- | --------------- | --------- |
-| 1       | Firebase Projekt anlegen                              | Daniel          | Vor Start |
-| 2       | GitHub Repo `festival-buddy` anlegen                  | Daniel          | Vor Start |
-| 3       | Scraper schreiben und alle Artists importieren        | Claude + Daniel | Sprint 1  |
-| 4       | Firebase Auth + Google Login implementieren           | Claude          | Sprint 1  |
-| 5       | Artist-Liste mit Filter und SoundCloud-Button         | Claude          | Sprint 1  |
-| 6       | Rating-System implementieren                          | Claude          | Sprint 2  |
-| 7       | Crew-Vergleich                                        | Claude          | Sprint 2  |
-| 8       | Timetable-Ansicht                                     | Claude          | Sprint 2  |
-| 9       | PWA + Service Worker + Offline                        | Claude          | Sprint 3  |
-| 10      | Admin-Bereich                                         | Claude          | Sprint 3  |
-| 11      | Timetable-Daten eintragen (wenn MODEM veröffentlicht) | Daniel          | Juli 2026 |
+| Schritt | Was                                                   | Wer             | Wann          | Status |
+| ------- | ----------------------------------------------------- | --------------- | ------------- | ------ |
+| 1       | Firebase Projekt anlegen                              | Daniel          | Vor Start     | ✅     |
+| 2       | GitHub Repo `heard` anlegen                           | Daniel          | Vor Start     | ✅     |
+| 3       | Scraper schreiben und alle Artists importieren        | Claude + Daniel | Sprint 1      | ✅     |
+| 4       | Firebase Auth + Google Login implementieren           | Claude          | Sprint 1      | ✅     |
+| 5       | Artist-Liste mit Filter und SoundCloud-Button         | Claude          | Sprint 1      | ✅     |
+| 6       | Rating-System implementieren                          | Claude          | Sprint 2      | ✅     |
+| 7       | Crew-System mit Invite-Codes                          | Claude          | Sprint 2      | ✅     |
+| 8       | Timetable-Ansicht                                     | Claude          | Sprint 2      | ✅     |
+| 9       | PWA + Service Worker + Offline                        | Claude          | Sprint 3      | ✅     |
+| 10      | Admin-Bereich                                         | Claude          | Sprint 3      | ✅     |
+| 11      | Crew-Feature mit echten Usern testen                  | Daniel + Crew   | April 2026    | Offen  |
+| 12      | Timetable-Daten eintragen (wenn MODEM veröffentlicht) | Daniel          | Juli 2026     | Offen  |
 
 ---
 
 ## 14. Offene Fragen
 
-| Frage                                                                              | Status                              |
-| ---------------------------------------------------------------------------------- | ----------------------------------- |
-| Wie soll die Crew-Vergleichsansicht aussehen?                                      | Offen — beim Entwickeln entscheiden |
-| Sollen Artists bewertet werden können ohne eingeloggt zu sein?                     | Nein — Login ist Pflicht            |
-| Was passiert wenn zwei Artists zur gleichen Zeit spielen und beide Favoriten sind? | Konflikt-Badge in Timetable         |
-| Sollen andere MODEM-Besucher (außerhalb der Crew) die Ratings sehen können?        | Prototyp: Nein. v1: optional        |
+| Frage                                                                              | Status                                                                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Wie soll die Crew-Vergleichsansicht aussehen?                                      | ✅ Invite-Code-System, nur verbundene Members, Avatar-Chips auf Karten                          |
+| Sollen Artists bewertet werden können ohne eingeloggt zu sein?                     | ✅ Nein — Login ist Pflicht                                                                     |
+| Was passiert wenn zwei Artists zur gleichen Zeit spielen und beide Favoriten sind? | ✅ Konflikt-Badge in Timetable                                                                  |
+| Sollen andere MODEM-Besucher (außerhalb der Crew) die Ratings sehen können?        | ✅ Jeder eingeloggte User sieht im Single-Modus alle Ratings aggregiert. Crew-Modus = nur Crew |
+
+## 15. Aktueller Stand (April 2026)
+
+Die App ist live unter `https://3dclassen.github.io/heard/`.
+
+**Was funktioniert:**
+- Google Login, automatisches User-Profil
+- Artist-Liste mit Filter (Stage, Status), Suche und Sortierung (A–Z, Z–A, ★↓, ★↑)
+- Rating pro Artist: 1–5 Sterne, Reingehört-Toggle, Favorit-Toggle, Kommentar
+- Avatar-Chips auf Artist-Karten: andere User die bewertet haben werden angezeigt
+- Crew-System: Invite-Code generieren/teilen/annehmen, bidirektionale Verbindung
+- Crew-Ansicht: nur verbundene Members, Shared Favorites, Artist-Liste mit Crew-Ratings
+- Persönlicher Timetable: Favoritenliste (Zeiten folgen im Juli mit MODEM-Timetable)
+- Konflikt-Erkennung im Timetable (sobald Zeiten vorhanden)
+- PWA: installierbar auf iOS und Android, Offline-Betrieb via Service Worker + localStorage
+- Admin-Bereich: Festival anlegen, Artists importieren/bearbeiten, User-Rollen verwalten
+- Scraper: Artists + SoundCloud-Links von MODEM 2026 bereits importiert
+
+**Was noch aussteht:**
+- Timetable-Zeiten (kommen von MODEM, voraussichtlich Juli 2026)
+- Crew-Feature mit echten Usern testen
