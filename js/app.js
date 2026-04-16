@@ -61,6 +61,8 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       console.log('[sw] registriert:', reg.scope);
+      // Alle 60s auf neue Version prüfen
+      setInterval(() => reg.update(), 60_000);
     });
 
     navigator.serviceWorker.addEventListener('message', e => {
