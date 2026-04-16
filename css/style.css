@@ -1255,6 +1255,60 @@ input, textarea {
   color: var(--text-muted);
 }
 
+/* ── Profil-Modal ── */
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.profile-email {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.btn-logout-modal {
+  width: 100%;
+  padding: 0.875rem;
+  border-radius: var(--radius-pill);
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: var(--danger);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background var(--transition);
+}
+
+.btn-logout-modal:hover {
+  background: rgba(244, 63, 94, 0.2);
+}
+
 /* ── Responsive ── */
 
 @media (min-width: 600px) {

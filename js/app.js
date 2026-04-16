@@ -20,7 +20,7 @@ import {
 // ── Konstante ──
 
 const FESTIVAL_ID = 'modem-2026';
-const APP_VERSION = 'v0.3';
+const APP_VERSION = '0.3';
 
 // ── State ──
 
@@ -90,8 +90,8 @@ btnLogout?.addEventListener('click', async () => {
   await logout();
 });
 
-navAvatar?.addEventListener('click', async () => {
-  await logout();
+navAvatar?.addEventListener('click', () => {
+  openProfileModal();
 });
 
 onAuthChange(async user => {
@@ -545,6 +545,40 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ── Profil-Modal ──
+
+const profileBackdrop = $('profile-backdrop');
+const profilePanel    = $('profile-panel');
+
+function openProfileModal() {
+  const user = state.user;
+  if (!user) return;
+
+  const img = $('profile-avatar-img');
+  if (img) img.src = user.photoURL || '';
+  const nameEl  = $('profile-name');
+  const emailEl = $('profile-email');
+  if (nameEl)  nameEl.textContent  = user.displayName || '—';
+  if (emailEl) emailEl.textContent = user.email || '';
+
+  profileBackdrop?.classList.add('open');
+  profilePanel?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProfileModal() {
+  profileBackdrop?.classList.remove('open');
+  profilePanel?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+profileBackdrop?.addEventListener('click', closeProfileModal);
+
+$('btn-logout-modal')?.addEventListener('click', async () => {
+  closeProfileModal();
+  await logout();
+});
 
 // Initial render (für den Fall dass Daten aus Cache kommen)
 render();
