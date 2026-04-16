@@ -284,6 +284,29 @@ function renderArtistCard(artist) {
   const favorite   = r?.want_to_see || false;
   const stageLabel = stageDisplayName(artist.stage);
 
+  // Andere User die diesen Artist bewertet oder als Favorit markiert haben
+  const othersRatings = state.ratings.filter(
+    rt => rt.artist_id === artist.id &&
+          rt.user_id   !== state.user?.uid &&
+          (rt.rating > 0 || rt.want_to_see)
+  );
+
+  const chipsHtml = othersRatings.length > 0
+    ? `<div class="card-chips">${othersRatings.map(rt => {
+        const u     = state.users.find(u => u.uid === rt.user_id);
+        const name  = u?.display_name || '?';
+        const photo = u?.photo_url || '';
+        const ini   = getInitials(name);
+        return `<div class="card-chip" title="${escHtml(name)}">
+          ${photo
+            ? `<img src="${escHtml(photo)}" alt="">`
+            : `<span class="chip-initials">${escHtml(ini)}</span>`}
+          ${rt.rating > 0   ? `<span class="chip-stars">${rt.rating}★</span>` : ''}
+          ${rt.want_to_see  ? `<span class="chip-fav">♥</span>`               : ''}
+        </div>`;
+      }).join('')}</div>`
+    : '';
+
   return `
     <div class="artist-card" data-id="${artist.id}">
       <div class="artist-name">${escHtml(artist.name)}</div>
@@ -295,6 +318,7 @@ function renderArtistCard(artist) {
         <div class="stars-mini">${renderStarsMini(rating)}</div>
         <span class="favorite-icon ${favorite ? 'visible' : ''}">♥</span>
       </div>
+      ${chipsHtml}
     </div>`;
 }
 
@@ -489,6 +513,13 @@ function showToast(msg, type = '') {
 function stageDisplayName(stage) {
   const map = { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' };
   return map[stage] || stage;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
 function escHtml(str) {

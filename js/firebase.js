@@ -187,5 +187,57 @@ export async function setUserRole(uid, role) {
   await updateDoc(doc(db, 'users', uid), { role });
 }
 
+// ── Crew ──
+
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // keine mehrdeutigen Zeichen (0/O, 1/I)
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+export async function createInviteCode(uid) {
+  const code = generateCode();
+  await setDoc(doc(db, 'crew_invites', code), {
+    creator_uid: uid,
+    created_at:  serverTimestamp(),
+    used:        false
+  });
+  return code;
+}
+
+export async function acceptInviteCode(code, uid) {
+  const normalized = code.trim().toUpperCase();
+  const inviteRef  = doc(db, 'crew_invites', normalized);
+  const snap       = await getDoc(inviteRef);
+
+  if (!snap.exists())             throw new Error('CODE_NOT_FOUND');
+  const invite = snap.data();
+  if (invite.used)                throw new Error('CODE_USED');
+  if (invite.creator_uid === uid) throw new Error('CODE_OWN');
+
+  // Bereits verbunden?
+  const q        = query(collection(db, 'crew_connections'), where('members', 'array-contains', uid));
+  const existing = await getDocs(q);
+  if (existing.docs.some(d => d.data().members.includes(invite.creator_uid))) {
+    throw new Error('ALREADY_CONNECTED');
+  }
+
+  await setDoc(doc(collection(db, 'crew_connections')), {
+    members:    [invite.creator_uid, uid],
+    created_at: serverTimestamp()
+  });
+  await updateDoc(inviteRef, { used: true });
+  return invite.creator_uid;
+}
+
+export function onCrewChange(uid, callback) {
+  const q = query(collection(db, 'crew_connections'), where('members', 'array-contains', uid));
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    err  => console.error('[firebase] onCrewChange Fehler:', err.code, err.message)
+  );
+}
+
 // Re-exports für direkten Import in anderen Modulen
 export { serverTimestamp, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs };

@@ -1085,6 +1085,176 @@ input, textarea {
   display: block;
 }
 
+/* ── Artist Card Chips (andere User die bewertet haben) ── */
+
+.card-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  margin-top: 0.125rem;
+  border-top: 1px solid var(--border);
+}
+
+.card-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.45rem 0.15rem 0.2rem;
+}
+
+.card-chip img,
+.chip-initials {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.chip-stars {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--star);
+}
+
+.chip-fav {
+  font-size: 0.65rem;
+  color: var(--seed);
+}
+
+/* ── Crew Invite Section ── */
+
+.invite-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.invite-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.875rem;
+}
+
+.invite-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.invite-code-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.invite-code-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-family: monospace;
+  color: var(--accent-light);
+  flex: 1;
+}
+
+.btn-copy {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  color: var(--text);
+  border-color: var(--border-light);
+}
+
+.btn-copy.copied {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.invite-code-input {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: monospace;
+  font-size: 1rem;
+}
+
+.invite-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin: 0.875rem 0;
+}
+
+.invite-divider::before,
+.invite-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Section Title (Crew-Seite) ── */
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Crew Member Card — Self-Highlight ── */
+
+.crew-member-card.self {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.crew-member-avatar.initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 
 @media (min-width: 600px) {
