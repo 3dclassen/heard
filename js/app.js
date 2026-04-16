@@ -61,10 +61,16 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       console.log('[sw] registriert:', reg.scope);
-      // Sync-Message vom SW empfangen
-      navigator.serviceWorker.addEventListener('message', e => {
-        if (e.data?.type === 'SYNC_REQUESTED') syncOfflineRatings();
-      });
+    });
+
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'SYNC_REQUESTED') syncOfflineRatings();
+      if (e.data?.type === 'SW_UPDATED')     window.location.reload();
+    });
+
+    // Wenn ein neuer SW die Kontrolle übernimmt → Seite neu laden
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
     });
   });
 }

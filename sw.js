@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heard-v2';
+const CACHE_NAME = 'heard-v3';
 
 // Statische App-Dateien die gecacht werden
 const STATIC_ASSETS = [
@@ -29,12 +29,14 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: alte Caches löschen
+// Activate: alte Caches löschen, dann alle Clients über Update informieren
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ includeUncontrolled: true }))
+      .then(clients => clients.forEach(c => c.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME })))
   );
 });
 
