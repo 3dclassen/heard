@@ -19,7 +19,8 @@ import {
 
 // ── Konstante ──
 
-const FESTIVAL_ID = 'modem-2026'; // muss mit dem ID in Firestore übereinstimmen
+const FESTIVAL_ID = 'modem-2026';
+const APP_VERSION = 'v0.3';
 
 // ── State ──
 
@@ -117,6 +118,11 @@ function showApp() {
       adminLink.style.display = '';
     }
   }
+
+  // Version im Titel setzen
+  document.title = `HEARD ${APP_VERSION} — Artists`;
+  const versionEl = $('app-version');
+  if (versionEl) versionEl.textContent = APP_VERSION;
 }
 
 // ── Firestore Listeners ──

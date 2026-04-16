@@ -53,6 +53,8 @@ enableIndexedDbPersistence(db).catch(err => {
 // ── Auth ──
 
 export const googleProvider = new GoogleAuthProvider();
+// Immer Account-Picker zeigen — wichtig für Tests mit mehreren Accounts
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export function loginWithGoogle() {
   return signInWithPopup(auth, googleProvider);
