@@ -20,7 +20,7 @@ import {
 // ── Konstante ──
 
 const FESTIVAL_ID = 'modem-2026';
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.7';
 
 // ── State ──
 

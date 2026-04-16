@@ -1255,6 +1255,10 @@ input, textarea {
   color: var(--text-muted);
 }
 
+/* Profil-Panel per default versteckt — zuverlässiger als nur translateY */
+#profile-panel { display: none; }
+#profile-panel.open { display: block; }
+
 /* ── Profil-Modal ── */
 
 .profile-header {
