@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heard-v5';
+const CACHE_NAME = 'heard-v6';
 
 // Statische App-Dateien die gecacht werden
 const STATIC_ASSETS = [

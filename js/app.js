@@ -557,12 +557,25 @@ function openProfileModal() {
   const user = state.user;
   if (!user) return;
 
-  const img = $('profile-avatar-img');
-  if (img) img.src = user.photoURL || '';
-  const nameEl  = $('profile-name');
-  const emailEl = $('profile-email');
-  if (nameEl)  nameEl.textContent  = user.displayName || '—';
-  if (emailEl) emailEl.textContent = user.email || '';
+  const avatarHtml = user.photoURL
+    ? `<img src="${escHtml(user.photoURL)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
+
+  $('profile-content').innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">${avatarHtml}</div>
+      <div>
+        <div class="profile-name">${escHtml(user.displayName || '—')}</div>
+        <div class="profile-email">${escHtml(user.email || '')}</div>
+      </div>
+    </div>
+    <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
+  `;
+
+  $('btn-logout-modal')?.addEventListener('click', async () => {
+    closeProfileModal();
+    await logout();
+  });
 
   profileBackdrop?.classList.add('open');
   profilePanel?.classList.add('open');
@@ -576,11 +589,6 @@ function closeProfileModal() {
 }
 
 profileBackdrop?.addEventListener('click', closeProfileModal);
-
-$('btn-logout-modal')?.addEventListener('click', async () => {
-  closeProfileModal();
-  await logout();
-});
 
 // Initial render (für den Fall dass Daten aus Cache kommen)
 render();
