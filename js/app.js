@@ -83,6 +83,10 @@ btnLogout?.addEventListener('click', async () => {
   await logout();
 });
 
+navAvatar?.addEventListener('click', async () => {
+  await logout();
+});
+
 onAuthChange(async user => {
   state.user = user;
   if (user) {
