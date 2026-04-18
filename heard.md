@@ -356,6 +356,15 @@ match /databases/{database}/documents {
    - Kommentar-Vorschau: eigener Kommentar (weiß/kursiv) zuerst, sonst Crew-Kommentar ausgegraut (Vorname: Text)
    - Crew-Chips prominenter: "CREW" Label in Akzentfarbe, accent-farbige Initialen, hellerer Border
    - SW-Cache: heard-v8, APP_VERSION: 0.8
+
+   Nachträglich aus Sprint 6 vorgezogen:
+   - "Gesehen"-Toggle im Artist-Panel implementiert (seen: boolean in Firebase)
+   - Panel visuell in zwei Bereiche getrennt:
+     "Vor dem Festival" (Reingehört + Favorit) und "Auf dem Festival" (Gesehen ✓)
+     → gestrichelte lila Border macht den Kontextwechsel klar
+   - firebase.js: saveRating unterstützt seen-Feld
+   - Offline-Cache ebenfalls seen-aware
+
 🔲 Sprint 5 — Offline-Auth (KRITISCH für Festival) (JETZT)
 Passphrase-System (offline-auth.js):
 
@@ -377,7 +386,7 @@ App berechnet SHA-256(passphrase) → vergleicht mit lokalem Hash
 Bei Match: User ist eingeloggt (lokale Session), alle gecachten Daten verfügbar
 
 UX-Hinweis beim Setup: "Diese Passphrase brauchst du auf dem Festival. Schreib sie auf oder schick sie dir selbst per WhatsApp."
-🔲 Sprint 6 — Mehrere Festivals + "Gesehen"-Checkbox
+🔲 Sprint 6 — Mehrere Festivals
 Festival-Switcher:
 
 active_festival_id im User-Profil
@@ -390,11 +399,7 @@ festival_templates Collection in Firebase
 Bekannte Festivals vorausgefüllt: MODEM, Nation of Gondwana, Ozora, Fusion, ...
 Beim Anlegen: aus Liste auswählen oder manuell eingeben
 
-"Gesehen"-Checkbox:
-
-Neues Feld seen: boolean im Rating
-Auf dem Festival antippbar: "Ich hab ihn gesehen!"
-Basis für späteres Festival-Buch
+"Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
 🔲 Sprint 7 — Timetable Admin-Flow
 Wenn MODEM den Timetable veröffentlicht (Juli 2026):
 
@@ -430,7 +435,7 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Bereits gelöste Bugs
     Service Worker Cache-Invalidierung (automatisches Update alle 60s)
     img src="" Bug im Profil-Panel (jetzt vollständig dynamisch gerendert)
-    APP_VERSION / SW-Version Mismatch (beide jetzt v0.7)
+    APP_VERSION / SW-Version Mismatch (beide jetzt v0.8)
 
 12. Backlog (nach MODEM)
     Feature
