@@ -1,0 +1,67 @@
+/* ── HEARD — Design Tokens ── */
+/* Zentrales Design System. Alle CSS-Variablen hier pflegen. */
+
+:root {
+  /* Farben — Hintergründe */
+  --bg:           #0a0a10;
+  --bg-card:      #14141f;
+  --bg-surface:   #1c1c2e;
+  --bg-overlay:   rgba(0, 0, 0, 0.7);
+
+  /* Farben — Akzent */
+  --accent:       #7c3aed;
+  --accent-light: #9b5df5;
+  --accent-glow:  rgba(124, 58, 237, 0.25);
+
+  /* Farben — Stages */
+  --hive:         #f59e0b;
+  --swamp:        #10b981;
+  --seed:         #f43f5e;
+
+  /* Farben — Text */
+  --text:         #e8e8f4;
+  --text-muted:   #6b6b8a;
+  --text-dim:     #3d3d56;
+
+  /* Farben — Borders */
+  --border:       #23233a;
+  --border-light: #2e2e48;
+
+  /* Farben — Status */
+  --star:         #fbbf24;
+  --star-empty:   #2e2e48;
+  --success:      #10b981;
+  --danger:       #f43f5e;
+  --warning:      #f59e0b;
+
+  /* Radien */
+  --radius:       12px;
+  --radius-sm:    8px;
+  --radius-pill:  999px;
+
+  /* Schatten */
+  --shadow:       0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow:  0 0 20px var(--accent-glow);
+
+  /* Animationen */
+  --transition:   0.18s ease;
+
+  /* Layout */
+  --nav-height:   60px;
+
+  /* Tiles */
+  --tile-height:        120px;
+  --tile-border-radius: 12px;
+
+  /* Abstände */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  /* Schriftgrößen */
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+}

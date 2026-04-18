@@ -20,7 +20,7 @@ import {
 // ── Konstante ──
 
 const FESTIVAL_ID = 'modem-2026';
-const APP_VERSION = '0.7';
+const APP_VERSION = '0.8';
 
 // ── State ──
 
@@ -310,20 +310,37 @@ function renderArtistCard(artist) {
   );
 
   const chipsHtml = othersRatings.length > 0
-    ? `<div class="card-chips">${othersRatings.map(rt => {
-        const u     = state.users.find(u => u.uid === rt.user_id);
-        const name  = u?.display_name || '?';
-        const photo = u?.photo_url || '';
-        const ini   = getInitials(name);
-        return `<div class="card-chip" title="${escHtml(name)}">
-          ${photo
-            ? `<img src="${escHtml(photo)}" alt="">`
-            : `<span class="chip-initials">${escHtml(ini)}</span>`}
-          ${rt.rating > 0   ? `<span class="chip-stars">${rt.rating}★</span>` : ''}
-          ${rt.want_to_see  ? `<span class="chip-fav">♥</span>`               : ''}
-        </div>`;
-      }).join('')}</div>`
+    ? `<div class="card-chips">
+        <span class="card-chips-label">Crew</span>
+        ${othersRatings.map(rt => {
+          const u     = state.users.find(u => u.uid === rt.user_id);
+          const name  = u?.display_name || '?';
+          const photo = u?.photo_url || '';
+          const ini   = getInitials(name);
+          return `<div class="card-chip" title="${escHtml(name)}">
+            ${photo
+              ? `<img src="${escHtml(photo)}" alt="">`
+              : `<span class="chip-initials">${escHtml(ini)}</span>`}
+            ${rt.rating > 0   ? `<span class="chip-stars">${rt.rating}★</span>` : ''}
+            ${rt.want_to_see  ? `<span class="chip-fav">♥</span>`               : ''}
+          </div>`;
+        }).join('')}
+      </div>`
     : '';
+
+  // Comment preview: eigener Kommentar zuerst, sonst erster Crew-Kommentar ausgegraut
+  const ownComment = r?.comment?.trim() || '';
+  let commentHtml = '';
+  if (ownComment) {
+    commentHtml = `<div class="card-comment own">${escHtml(ownComment)}</div>`;
+  } else {
+    const crewWithComment = othersRatings.find(rt => rt.comment?.trim());
+    if (crewWithComment) {
+      const u = state.users.find(u => u.uid === crewWithComment.user_id);
+      const name = u?.display_name?.split(' ')[0] || '?';
+      commentHtml = `<div class="card-comment">${escHtml(name)}: ${escHtml(crewWithComment.comment.trim())}</div>`;
+    }
+  }
 
   return `
     <div class="artist-card" data-id="${artist.id}">
@@ -332,6 +349,7 @@ function renderArtistCard(artist) {
         <span class="stage-badge ${artist.stage}">${stageLabel}</span>
         <span class="listened-dot ${listened ? '' : 'hidden'}"></span>
       </div>
+      ${commentHtml}
       <div class="card-right">
         <div class="stars-mini">${renderStarsMini(rating)}</div>
         <span class="favorite-icon ${favorite ? 'visible' : ''}">♥</span>

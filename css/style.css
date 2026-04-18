@@ -1,44 +1,5 @@
-/* ── HEARD Festival Buddy — Design System ── */
-
-:root {
-  --bg:           #0a0a10;
-  --bg-card:      #14141f;
-  --bg-surface:   #1c1c2e;
-  --bg-overlay:   rgba(0, 0, 0, 0.7);
-
-  --accent:       #7c3aed;
-  --accent-light: #9b5df5;
-  --accent-glow:  rgba(124, 58, 237, 0.25);
-
-  --hive:         #f59e0b;   /* The Hive — Amber */
-  --swamp:        #10b981;   /* The Swamp — Emerald */
-  --seed:         #f43f5e;   /* The Seed — Rose */
-
-  --text:         #e8e8f4;
-  --text-muted:   #6b6b8a;
-  --text-dim:     #3d3d56;
-
-  --border:       #23233a;
-  --border-light: #2e2e48;
-
-  --star:         #fbbf24;
-  --star-empty:   #2e2e48;
-
-  --success:      #10b981;
-  --danger:       #f43f5e;
-  --warning:      #f59e0b;
-
-  --radius:       12px;
-  --radius-sm:    8px;
-  --radius-pill:  999px;
-
-  --shadow:       0 4px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow:  0 0 20px var(--accent-glow);
-
-  --transition:   0.18s ease;
-
-  --nav-height:   60px;
-}
+/* ── HEARD Festival Buddy — Styles ── */
+@import './design-tokens.css';
 
 /* ── Reset & Base ── */
 
@@ -362,15 +323,15 @@ input, textarea {
 .artist-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--tile-border-radius);
   padding: 0.875rem 1rem;
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto;
-  gap: 0.375rem 1rem;
+  grid-template-rows: auto auto 1fr;
+  gap: 0.25rem 1rem;
   cursor: pointer;
   transition: border-color var(--transition), background var(--transition);
-  align-items: center;
+  min-height: var(--tile-height);
 }
 
 .artist-card:hover {
@@ -389,6 +350,10 @@ input, textarea {
   color: var(--text);
   grid-row: 1;
   grid-column: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .artist-meta {
@@ -429,7 +394,7 @@ input, textarea {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.375rem;
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   grid-column: 2;
 }
 
@@ -454,6 +419,24 @@ input, textarea {
 
 .favorite-icon.visible {
   opacity: 1;
+}
+
+.card-comment {
+  grid-row: 3;
+  grid-column: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  align-self: end;
+  padding-bottom: 0.125rem;
+}
+
+.card-comment.own {
+  color: var(--text);
+  font-style: italic;
 }
 
 /* ── Empty State ── */
@@ -1085,42 +1068,53 @@ input, textarea {
   display: block;
 }
 
-/* ── Artist Card Chips (andere User die bewertet haben) ── */
+/* ── Artist Card Chips (Crew-Aktivität) ── */
 
 .card-chips {
   grid-column: 1 / -1;
   display: flex;
+  align-items: center;
   gap: 0.375rem;
   flex-wrap: wrap;
   padding-top: 0.5rem;
-  margin-top: 0.125rem;
+  margin-top: 0.25rem;
   border-top: 1px solid var(--border);
+}
+
+.card-chips-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-light);
+  margin-right: 0.125rem;
+  flex-shrink: 0;
 }
 
 .card-chip {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
   background: var(--bg-surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-pill);
-  padding: 0.15rem 0.45rem 0.15rem 0.2rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.25rem;
 }
 
 .card-chip img,
 .chip-initials {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  background: var(--bg);
+  background: var(--accent-glow);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--accent-light);
   text-transform: uppercase;
 }
 
@@ -1131,7 +1125,7 @@ input, textarea {
 }
 
 .chip-fav {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--seed);
 }
 
