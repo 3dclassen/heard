@@ -392,6 +392,7 @@ function renderPanel(artist) {
   const currentListened  = myRating?.listened  || false;
   const currentFavorite  = myRating?.want_to_see || false;
   const currentComment   = myRating?.comment   || '';
+  const currentSeen      = myRating?.seen      || false;
 
   const scBtn = artist.soundcloud_url
     ? `<a href="${escHtml(artist.soundcloud_url)}" target="_blank" rel="noopener" class="btn-soundcloud">
@@ -437,7 +438,7 @@ function renderPanel(artist) {
     </div>
 
     <div class="toggle-section">
-      <label>Status</label>
+      <div class="toggle-context-label">Vor dem Festival</div>
       <div class="toggle-row">
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-listened" ${currentListened ? 'checked' : ''}>
@@ -445,12 +446,23 @@ function renderPanel(artist) {
         </label>
         <span class="toggle-label">Reingehört</span>
       </div>
-      <div class="toggle-row" style="margin-top:0.5rem">
+      <div class="toggle-row">
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-favorite" ${currentFavorite ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
         <span class="toggle-label">Favorit — will ich sehen ♥</span>
+      </div>
+    </div>
+
+    <div class="toggle-section on-festival">
+      <div class="toggle-context-label festival">Auf dem Festival</div>
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-seen" ${currentSeen ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Gesehen ✓</span>
       </div>
     </div>
 
@@ -493,7 +505,8 @@ function renderPanel(artist) {
       rating:      selectedRating,
       comment:     document.getElementById('comment-input')?.value || '',
       listened:    document.getElementById('toggle-listened')?.checked || false,
-      want_to_see: document.getElementById('toggle-favorite')?.checked || false
+      want_to_see: document.getElementById('toggle-favorite')?.checked || false,
+      seen:        document.getElementById('toggle-seen')?.checked || false
     };
 
     try {
@@ -505,7 +518,7 @@ function renderPanel(artist) {
         const cached = getCachedRatings();
         const id = ratingId(data.userId, data.artistId);
         const idx = cached.findIndex(r => r.id === id);
-        const entry = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, ...data };
+        const entry = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false };
         if (idx >= 0) cached[idx] = entry; else cached.push(entry);
         state.ratings = cached;
         cacheRatings(cached);

@@ -592,6 +592,33 @@ input, textarea {
 
 /* ── Toggles ── */
 
+.toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.toggle-context-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.625rem;
+}
+
+.toggle-context-label.festival {
+  color: var(--accent-light);
+}
+
+.toggle-section.on-festival {
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  margin-top: -0.25rem;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;

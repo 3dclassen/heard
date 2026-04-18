@@ -151,7 +151,7 @@ export function onRatingsChange(festivalId, callback) {
   );
 }
 
-export async function saveRating({ userId, artistId, festivalId, rating, comment, listened, want_to_see }) {
+export async function saveRating({ userId, artistId, festivalId, rating, comment, listened, want_to_see, seen }) {
   const id  = ratingId(userId, artistId);
   const ref = doc(db, 'ratings', id);
   await setDoc(ref, {
@@ -162,6 +162,7 @@ export async function saveRating({ userId, artistId, festivalId, rating, comment
     comment:    comment ?? '',
     listened:   listened ?? false,
     want_to_see: want_to_see ?? false,
+    seen:       seen ?? false,
     updated_at: serverTimestamp()
   });
 }
