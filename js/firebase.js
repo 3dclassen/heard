@@ -190,6 +190,10 @@ export async function setUserRole(uid, role) {
   await updateDoc(doc(db, 'users', uid), { role });
 }
 
+export async function saveOfflineAuthHash(uid, hash) {
+  await updateDoc(doc(db, 'users', uid), { offline_auth_hash: hash });
+}
+
 // ── Crew ──
 
 function generateCode() {

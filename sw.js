@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heard-v8';
+const CACHE_NAME = 'heard-v9';
 
 // Statische App-Dateien die gecacht werden
 const STATIC_ASSETS = [
@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
   './css/style.css',
   './js/firebase.js',
   './js/app.js',
+  './js/offline-auth.js',
   './js/rating.js',
   './js/timetable.js',
   './js/sync.js',

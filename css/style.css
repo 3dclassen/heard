@@ -1364,3 +1364,97 @@ input, textarea {
     padding: 1.5rem 2rem;
   }
 }
+
+/* ── Offline Login Screen ── */
+
+#offline-login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 2rem;
+  text-align: center;
+  gap: 1.25rem;
+}
+
+.offline-login-hint {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 280px;
+  margin-top: -0.5rem;
+}
+
+.offline-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+/* ── Passphrase Input ── */
+
+.passphrase-input {
+  width: 100%;
+  max-width: 320px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  text-align: center;
+  outline: none;
+  transition: border-color var(--transition);
+  letter-spacing: 0.03em;
+}
+
+.passphrase-input::placeholder {
+  color: var(--text-muted);
+}
+
+.passphrase-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ── Passphrase Setup Panel ── */
+
+.passphrase-suggestion-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  font-size: var(--font-size-md);
+  color: var(--text);
+  font-style: italic;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.passphrase-suggestion-box:hover {
+  background: var(--bg-overlay);
+}
+
+.passphrase-suggestion-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.passphrase-setup-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border-left: 3px solid var(--accent);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ── 80s Quote Hint ── */
+
+.quote-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-dim);
+  font-style: italic;
+  text-align: right;
+  margin-top: calc(var(--space-xs) * -1);
+}

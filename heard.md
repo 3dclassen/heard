@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.5 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.8) — Sprint 5 startet
+Version: 0.9 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.9) — Sprint 5 fertig
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -365,27 +365,35 @@ match /databases/{database}/documents {
    - firebase.js: saveRating unterstützt seen-Feld
    - Offline-Cache ebenfalls seen-aware
 
-🔲 Sprint 5 — Offline-Auth (KRITISCH für Festival) (JETZT)
+✅ Sprint 5 — Offline-Auth (FERTIG, v0.9)
 Passphrase-System (offline-auth.js):
 
 Beim ersten Login (mit Internet):
-
-User richtet Passphrase ein — App generiert einen Vorschlag:
-"Daniel will GRUB auf dem Swamp unbedingt sehen" (aus Favoriten)
-"Daniel findet BUG zu beliebig" (aus schlechten Ratings + Kommentar)
-Oder: User gibt eigene Passphrase ein
-User bestätigt Passphrase (zweimal eingeben)
-App berechnet SHA-256(passphrase) → speichert Hash in localStorage UND Firebase (users/{uid}/offline_auth_hash)
-Passphrase selbst wird NIEMALS gespeichert
+- App schlägt automatisch nach 1,5s Passphrase-Setup vor (nicht blockierend, aber hartnäckig)
+- Vorschlag wird aus Favoriten generiert: "Daniel will GRUB unbedingt live sehen"
+- User tippt auf Vorschlag → übernehmen, oder eigene Passphrase eingeben (min. 6 Zeichen)
+- User bestätigt Passphrase (zweimal eingeben)
+- App berechnet SHA-256(passphrase) → speichert Hash in localStorage UND Firebase (users/{uid}/offline_auth_hash)
+- Passphrase selbst wird NIEMALS gespeichert
+- UX-Hinweis: "Schreib sie auf oder schick sie dir per WhatsApp"
 
 Auf dem Festival (ohne Internet):
+- App erkennt: kein Internet → zeigt Offline-Login-Screen
+- Personalisierte Begrüßung: "Hey Daniel. Du bist offline."
+- User gibt Passphrase ein → SHA-256 → Vergleich mit lokalem Hash
+- Bei Match: gecachte Daten (Artists, Ratings, Users) aus localStorage geladen, App läuft voll
 
-App erkennt: kein Internet → zeigt Offline-Login-Screen
-User gibt Passphrase ein
-App berechnet SHA-256(passphrase) → vergleicht mit lokalem Hash
-Bei Match: User ist eingeloggt (lokale Session), alle gecachten Daten verfügbar
+Profil-Modal:
+- Zeigt Passphrase-Status (✓ grün / ⚠ gelb)
+- "Ändern"-Button öffnet Setup erneut
 
-UX-Hinweis beim Setup: "Diese Passphrase brauchst du auf dem Festival. Schreib sie auf oder schick sie dir selbst per WhatsApp."
+80s-Quotes eingebaut (v0.9):
+- Kommentar-Placeholder im Rating-Panel (zufällig, wechselnd)
+- Toast nach 5★ Rating: A-Team / MacGyver
+- Toast nach 1★ Rating: Al Bundy / ALF
+- Offline-Login erfolgreich: Terminator / Knight Rider / Dirty Dancing
+- Passphrase-Setup: ALF / MacGyver / Al Bundy
+- Empty State ohne Daten: Colt Sievers
 🔲 Sprint 6 — Mehrere Festivals
 Festival-Switcher:
 
@@ -441,7 +449,7 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Feature
     Aufwand
     Prio
-    Crew-Match zwischen fremden Crews (Ähnlichkeits-Score)
+    Crew-Match zwischen fremden Crews (Ähnlichkeits-Score) — DETAILKONZEPT UNTEN
     Mittel
     v1
     Drag & Drop Timetable
@@ -469,6 +477,34 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Mittel
     v2
 
+12a. Crew-Match — Detailkonzept (v1, nach MODEM)
+Idee: Fremde Crews mit ähnlichen musikalischen Vorlieben/Timetables finden und kennenlernen.
+
+Matching-Logik:
+- Basis: Überschneidung der want_to_see-Artists zwischen zwei Crews
+- Score: (gemeinsame Favoriten) / (Vereinigung aller Favoriten) = Jaccard-Ähnlichkeit
+- Anzeige: Nicht als %-Zahl sondern als 80er-Referenz-Skala:
+  - 0–20%: "Das reicht für einen Händedruck, MacGyver."
+  - 21–40%: "Ähnlich wie Knight Rider und ein normales Auto."
+  - 41–60%: "1.21 Gigawatt Potenzial." ← SWEET SPOT
+  - 61–80%: "Ich liebe es wenn ein Plan funktioniert."
+  - 81–100%: "TURBO BOOST. Das ist euer Match."
+
+Match-Flow (Tinder-Mechanismus):
+1. User sieht anonymisierte andere Crews mit Score ("Crew XY — 1.21 Gigawatt Potenzial")
+2. User sendet Match-Anfrage (generiert einmaligen Code)
+3. Andere Crew sieht Anfrage, akzeptiert mit eigenem Code
+4. Beide Codes getauscht → Match bestätigt
+5. App generiert vorbereiteten WhatsApp-Deeplink:
+   "Hey! Wir sind Crew [Name] — HEARD hat uns gematcht (1.21 Gigawatt ⚡).
+    Wann und wo sehen wir uns? 🎵"
+   → Kein eigener Chat nötig, kein Offline-Problem
+
+Warum noch nicht im Prototyp:
+- Nur 3 User beim MODEM 2026 → kein Cross-Crew-Matching möglich
+- Braucht mehrere Crews mit je mehreren Bewertungen (mind. 10 Artists bewertet)
+- Erst nach MODEM wenn mehr User auf der Plattform sind
+
 13. Sprint-Plan
     Sprint
     Was
@@ -480,8 +516,8 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Design System + Tile-Layout-Überarbeitung
     ✅ Fertig (v0.8)
     5
-    Offline-Auth (Passphrase)
-    🔲 Jetzt
+    Offline-Auth (Passphrase) + 80s-Quotes
+    ✅ Fertig (v0.9)
     6
     Mehrere Festivals + "Gesehen"-Checkbox
     🔲 Mai 2026

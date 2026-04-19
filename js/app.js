@@ -1,26 +1,79 @@
 // ── HEARD — Haupt-App (index.html) ──
-// Artist-Liste, Filter, Auth-State, Rating-Panel
 
 import {
   auth, db,
   loginWithGoogle, logout, onAuthChange, ensureUserProfile,
   onArtistsChange, onRatingsChange, onUsersChange,
-  saveRating, ratingId
+  saveRating, ratingId, saveOfflineAuthHash
 } from './firebase.js';
 
 import {
   cacheArtists, getCachedArtists,
   cacheRatings, getCachedRatings,
   cacheUsers, getCachedUsers,
-  cacheFestival, getCachedFestival,
   addPendingRating, syncPendingToFirebase,
   isOnline, onOnline, onOffline
 } from './sync.js';
 
+import {
+  setupPassphrase, verifyPassphrase,
+  hasOfflineHash, hasCachedUser, getCachedUser, cacheUserForOffline,
+  generatePassphraseSuggestion
+} from './offline-auth.js';
+
 // ── Konstante ──
 
 const FESTIVAL_ID = 'modem-2026';
-const APP_VERSION = '0.8';
+const APP_VERSION = '0.9';
+
+// ── 80er-Zitate ──
+
+const QUOTES = {
+  fiveStars: [
+    "Ich liebe es wenn ein Plan funktioniert.",       // Hannibal — A-Team
+    "Das war kein Zufall — das war Talent.",          // MacGyver
+    "Schön. Sehr schön sogar.",                       // Derrick
+  ],
+  oneStar: [
+    "Wissen Sie, ich hab heute schon 4 Touchdowns gemacht.",  // Al Bundy
+    "Ich hab Schlimmeres überlebt, Murdock.",                 // A-Team
+    "Ha! I kill me.",                                         // ALF
+  ],
+  offlineLoginSuccess: [
+    "I'll be back. Aber erstmal: du bist drin.",   // Terminator
+    "Turbo Boost, KITT. Wir fahren offline.",       // Knight Rider
+    "Nobody puts Baby offline.",                    // Dirty Dancing
+  ],
+  passphraseSetup: [
+    "Ha! I kill me. Und meine Passphrase.",              // ALF
+    "Du hast 5 Sekunden. Okay, mehr. Aber denk nach.",   // MacGyver
+    "Schreib sie auf. Wirklich. Al Bundy hätte es nicht getan — und schau wie es ihm geht.",
+  ],
+  timetableConflict: [
+    "Turbo Boost, KITT — ich brauch eine andere Route!",  // Knight Rider
+    "Murdock, wir können nicht an zwei Orten gleichzeitig sein.",
+    "MacGyver hätte sich das besser eingeteilt.",
+  ],
+  commentPlaceholders: [
+    "Ha! I kill me.",
+    "Was sagst du wenn du nach Hause kommst?",
+    "Sag's wie Al Bundy: kurz, ehrlich, unvergesslich.",
+    "Drei Worte. Oder Emojis. Oder beides.",
+    "Murdock würde hier etwas Verrücktes schreiben.",
+    "Was hat dein Unterbewusstsein gehört?",
+    "\"Ich komm' wieder.\" — und wie war's?",
+    "MacGyver-Analyse: Potential vorhanden?",
+  ],
+  emptyOffline: [
+    "Ich bin nicht hier um zu verlieren.",    // Colt Sievers
+    "Ohne Daten kann auch Hannibal keinen Plan machen.",
+  ],
+};
+
+function randomQuote(key) {
+  const arr = QUOTES[key] || [];
+  return arr[Math.floor(Math.random() * arr.length)] || '';
+}
 
 // ── State ──
 
@@ -28,13 +81,13 @@ let state = {
   user:        null,
   userProfile: null,
   artists:     [],
-  ratings:     [],   // alle Ratings aller User
+  ratings:     [],
   users:       [],
   filterStage:  'all',
   filterStatus: 'all',
   searchQuery:  '',
   sortBy:       'name-asc',
-  openArtist:   null,  // aktuell geöffneter Artist im Panel
+  openArtist:   null,
   unsubscribers: []
 };
 
@@ -42,26 +95,25 @@ let state = {
 
 const $ = id => document.getElementById(id);
 
-const loginScreen  = $('login-screen');
-const appShell     = $('app-shell');
-const btnLogin     = $('btn-login');
-const btnLogout    = $('btn-logout');
-const navAvatar    = $('nav-avatar');
-const navAvatarImg = $('nav-avatar-img');
-const offlineBanner = $('offline-banner');
-const artistList   = $('artist-list');
-const artistCount  = $('artist-count');
-const searchInput  = $('search-input');
-const panelBackdrop = $('panel-backdrop');
-const panel        = $('panel');
+const loginScreen        = $('login-screen');
+const offlineLoginScreen = $('offline-login-screen');
+const appShell           = $('app-shell');
+const btnLogin           = $('btn-login');
+const btnLogout          = $('btn-logout');
+const navAvatar          = $('nav-avatar');
+const navAvatarImg       = $('nav-avatar-img');
+const offlineBanner      = $('offline-banner');
+const artistList         = $('artist-list');
+const searchInput        = $('search-input');
+const panelBackdrop      = $('panel-backdrop');
+const panel              = $('panel');
 
-// ── Service Worker registrieren ──
+// ── Service Worker ──
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       console.log('[sw] registriert:', reg.scope);
-      // Alle 60s auf neue Version prüfen
       setInterval(() => reg.update(), 60_000);
     });
 
@@ -70,7 +122,6 @@ if ('serviceWorker' in navigator) {
       if (e.data?.type === 'SW_UPDATED')     window.location.reload();
     });
 
-    // Wenn ein neuer SW die Kontrolle übernimmt → Seite neu laden
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
     });
@@ -99,38 +150,202 @@ navAvatar?.addEventListener('click', () => {
 onAuthChange(async user => {
   state.user = user;
   if (user) {
+    cacheUserForOffline(user);
     state.userProfile = await ensureUserProfile(user);
     showApp();
     startListeners();
     await syncOfflineRatings();
+    // Passphrase-Setup nach kurzem Delay vorschlagen wenn noch nicht eingerichtet
+    if (!hasOfflineHash()) {
+      setTimeout(() => showPassphraseSetup(), 1500);
+    }
   } else {
     stopListeners();
-    showLogin();
+    // Offline + gecachte Session vorhanden → Passphrase-Login anbieten
+    if (!isOnline() && hasCachedUser() && hasOfflineHash()) {
+      showOfflineLogin();
+    } else if (!isOnline() && hasCachedUser()) {
+      // Kein Hash eingerichtet — gecachte Daten laden aber Hinweis zeigen
+      loadOfflineWithoutAuth();
+    } else {
+      showLogin();
+    }
   }
 });
 
 function showLogin() {
   loginScreen.style.display = 'flex';
+  offlineLoginScreen.style.display = 'none';
   appShell.classList.remove('visible');
 }
 
 function showApp() {
   loginScreen.style.display = 'none';
+  offlineLoginScreen.style.display = 'none';
   appShell.classList.add('visible');
 
   if (state.user) {
     if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
-    // Admin-Link anzeigen wenn nötig
     const adminLink = $('nav-admin');
     if (adminLink && state.userProfile?.role === 'admin') {
       adminLink.style.display = '';
     }
   }
 
-  // Version im Titel setzen
   document.title = `HEARD ${APP_VERSION} — Artists`;
   const versionEl = $('app-version');
   if (versionEl) versionEl.textContent = APP_VERSION;
+}
+
+// ── Offline Login ──
+
+function showOfflineLogin() {
+  const cached = getCachedUser();
+  loginScreen.style.display = 'none';
+  offlineLoginScreen.style.display = 'flex';
+  appShell.classList.remove('visible');
+
+  if (cached?.displayName) {
+    const greeting = $('offline-user-greeting');
+    if (greeting) greeting.textContent = `Hey ${cached.displayName.split(' ')[0]}. Du bist offline.`;
+  }
+}
+
+// Offline ohne eingerichtete Passphrase — Daten trotzdem laden
+function loadOfflineWithoutAuth() {
+  const cached = getCachedUser();
+  if (!cached) { showLogin(); return; }
+
+  // Synthetisches User-Objekt aus Cache
+  state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
+  state.artists = getCachedArtists();
+  state.ratings = getCachedRatings();
+  state.users   = getCachedUsers();
+  showApp();
+  if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
+  render();
+  showToast('Offline — keine Passphrase eingerichtet. Daten aus Cache geladen.', 'error');
+}
+
+$('btn-offline-login')?.addEventListener('click', async () => {
+  const input = $('offline-passphrase-input');
+  const errorEl = $('offline-login-error');
+  const passphrase = input?.value || '';
+
+  if (!passphrase) return;
+
+  const ok = await verifyPassphrase(passphrase);
+  if (ok) {
+    const cached = getCachedUser();
+    state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
+    state.artists = getCachedArtists();
+    state.ratings = getCachedRatings();
+    state.users   = getCachedUsers();
+    showApp();
+    if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
+    render();
+    showToast(randomQuote('offlineLoginSuccess'), 'success');
+  } else {
+    if (errorEl) errorEl.style.display = '';
+    input?.select();
+  }
+});
+
+$('offline-passphrase-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-offline-login')?.click();
+});
+
+// ── Passphrase Setup ──
+
+const passphraseBackdrop = $('passphrase-backdrop');
+const passphrasePanel    = $('passphrase-panel');
+
+function openPassphrasePanel() {
+  passphraseBackdrop?.classList.add('open');
+  passphrasePanel?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePassphrasePanel() {
+  passphraseBackdrop?.classList.remove('open');
+  passphrasePanel?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+passphraseBackdrop?.addEventListener('click', closePassphrasePanel);
+
+function showPassphraseSetup() {
+  const suggestion = generatePassphraseSuggestion(
+    state.user?.displayName,
+    state.artists,
+    state.ratings,
+    state.user?.uid
+  );
+
+  $('passphrase-content').innerHTML = `
+    <div class="panel-header">
+      <div class="panel-artist-name" style="font-size:1.1rem">Festival-Passphrase einrichten</div>
+    </div>
+    <div class="passphrase-setup-hint">
+      Auf dem Festival gibt's kein Internet. Mit dieser Passphrase kannst du dich trotzdem einloggen.<br>
+      <strong>Schreib sie auf — oder schick sie dir per WhatsApp.</strong>
+    </div>
+    <div>
+      <div class="passphrase-suggestion-label">Vorschlag (tippen zum Übernehmen):</div>
+      <div class="passphrase-suggestion-box" id="passphrase-suggestion">${escHtml(suggestion)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem">
+      <input type="text" id="passphrase-input-1" class="passphrase-input" placeholder="Passphrase eingeben..." value="">
+      <input type="text" id="passphrase-input-2" class="passphrase-input" placeholder="Passphrase bestätigen...">
+      <p id="passphrase-match-error" style="color:var(--danger);font-size:0.85rem;display:none">Die Passphrases stimmen nicht überein.</p>
+    </div>
+    <p class="quote-hint">${escHtml(randomQuote('passphraseSetup'))}</p>
+    <button class="btn-save" id="btn-save-passphrase">Passphrase speichern</button>
+    <button id="btn-skip-passphrase" style="color:var(--text-muted);font-size:0.85rem;background:none;padding:0.25rem">Später einrichten</button>
+  `;
+
+  $('passphrase-suggestion')?.addEventListener('click', () => {
+    const s = $('passphrase-suggestion')?.textContent || '';
+    const i1 = $('passphrase-input-1');
+    const i2 = $('passphrase-input-2');
+    if (i1) i1.value = s;
+    if (i2) i2.value = s;
+  });
+
+  $('btn-save-passphrase')?.addEventListener('click', async () => {
+    const p1 = $('passphrase-input-1')?.value.trim();
+    const p2 = $('passphrase-input-2')?.value.trim();
+    const errEl = $('passphrase-match-error');
+
+    if (!p1 || p1.length < 6) {
+      showToast('Bitte mindestens 6 Zeichen eingeben', 'error'); return;
+    }
+    if (p1 !== p2) {
+      if (errEl) errEl.style.display = '';
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+
+    const btn = $('btn-save-passphrase');
+    btn.disabled = true;
+    btn.textContent = 'Wird gespeichert...';
+
+    const hash = await setupPassphrase(p1);
+
+    // Hash auch in Firebase speichern (damit bei neuem Gerät wiederherstellbar)
+    try {
+      if (isOnline() && state.user) await saveOfflineAuthHash(state.user.uid, hash);
+    } catch (e) {
+      console.warn('[offline-auth] Hash nicht in Firebase gespeichert:', e);
+    }
+
+    closePassphrasePanel();
+    showToast('Passphrase gespeichert. I\'ll be back — auch offline.', 'success');
+  });
+
+  $('btn-skip-passphrase')?.addEventListener('click', closePassphrasePanel);
+
+  openPassphrasePanel();
 }
 
 // ── Firestore Listeners ──
@@ -145,7 +360,6 @@ function startListeners() {
   const u2 = onRatingsChange(FESTIVAL_ID, ratings => {
     state.ratings = ratings;
     cacheRatings(ratings);
-    // Panel aktualisieren wenn offen
     if (state.openArtist) renderPanel(state.openArtist);
   });
 
@@ -173,10 +387,8 @@ onOffline(() => {
   offlineBanner?.classList.add('visible');
 });
 
-// Beim Start: Offline-State prüfen
 if (!isOnline()) {
   offlineBanner?.classList.add('visible');
-  // Gecachte Daten laden
   state.artists = getCachedArtists();
   state.ratings = getCachedRatings();
   state.users   = getCachedUsers();
@@ -240,10 +452,10 @@ function filteredArtists() {
 
     if (state.filterStatus !== 'all') {
       const r = getMyRating(a.id);
-      if (state.filterStatus === 'unrated'    && r?.rating > 0)        return false;
-      if (state.filterStatus === 'rated'      && !(r?.rating > 0))     return false;
-      if (state.filterStatus === 'favorites'  && !r?.want_to_see)      return false;
-      if (state.filterStatus === 'listened'   && !r?.listened)         return false;
+      if (state.filterStatus === 'unrated'    && r?.rating > 0)    return false;
+      if (state.filterStatus === 'rated'      && !(r?.rating > 0)) return false;
+      if (state.filterStatus === 'favorites'  && !r?.want_to_see)  return false;
+      if (state.filterStatus === 'listened'   && !r?.listened)     return false;
     }
 
     if (state.searchQuery) {
@@ -259,31 +471,28 @@ function filteredArtists() {
 function sortArtists(artists) {
   const copy = [...artists];
   switch (state.sortBy) {
-    case 'name-asc':
-      return copy.sort((a, b) => a.name.localeCompare(b.name, 'de'));
-    case 'name-desc':
-      return copy.sort((a, b) => b.name.localeCompare(a.name, 'de'));
-    case 'rating-desc':
-      return copy.sort((a, b) => (getMyRating(b.id)?.rating || 0) - (getMyRating(a.id)?.rating || 0));
-    case 'rating-asc':
-      return copy.sort((a, b) => (getMyRating(a.id)?.rating || 0) - (getMyRating(b.id)?.rating || 0));
-    default:
-      return copy;
+    case 'name-asc':    return copy.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    case 'name-desc':   return copy.sort((a, b) => b.name.localeCompare(a.name, 'de'));
+    case 'rating-desc': return copy.sort((a, b) => (getMyRating(b.id)?.rating || 0) - (getMyRating(a.id)?.rating || 0));
+    case 'rating-asc':  return copy.sort((a, b) => (getMyRating(a.id)?.rating || 0) - (getMyRating(b.id)?.rating || 0));
+    default:            return copy;
   }
 }
 
 function render() {
-  const artists = filteredArtists();
-  const countEl = document.getElementById('artist-count-text');
+  const artists  = filteredArtists();
+  const countEl  = document.getElementById('artist-count-text');
   if (countEl) countEl.textContent = `${artists.length} Artists`;
 
   if (artists.length === 0) {
+    const quote = state.artists.length === 0 ? randomQuote('emptyOffline') : '';
     artistList.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🎵</div>
         <p>${state.artists.length === 0
-          ? 'Noch keine Artists geladen. Ein Admin muss zuerst den Scraper ausführen.'
+          ? `Noch keine Artists geladen. Ein Admin muss zuerst den Scraper ausführen.`
           : 'Keine Artists für diesen Filter.'}</p>
+        ${quote ? `<p class="quote-hint" style="margin-top:0.5rem">${escHtml(quote)}</p>` : ''}
       </div>`;
     return;
   }
@@ -302,7 +511,6 @@ function renderArtistCard(artist) {
   const favorite   = r?.want_to_see || false;
   const stageLabel = stageDisplayName(artist.stage);
 
-  // Andere User die diesen Artist bewertet oder als Favorit markiert haben
   const othersRatings = state.ratings.filter(
     rt => rt.artist_id === artist.id &&
           rt.user_id   !== state.user?.uid &&
@@ -321,14 +529,13 @@ function renderArtistCard(artist) {
             ${photo
               ? `<img src="${escHtml(photo)}" alt="">`
               : `<span class="chip-initials">${escHtml(ini)}</span>`}
-            ${rt.rating > 0   ? `<span class="chip-stars">${rt.rating}★</span>` : ''}
-            ${rt.want_to_see  ? `<span class="chip-fav">♥</span>`               : ''}
+            ${rt.rating > 0  ? `<span class="chip-stars">${rt.rating}★</span>` : ''}
+            ${rt.want_to_see ? `<span class="chip-fav">♥</span>`               : ''}
           </div>`;
         }).join('')}
       </div>`
     : '';
 
-  // Comment preview: eigener Kommentar zuerst, sonst erster Crew-Kommentar ausgegraut
   const ownComment = r?.comment?.trim() || '';
   let commentHtml = '';
   if (ownComment) {
@@ -336,7 +543,7 @@ function renderArtistCard(artist) {
   } else {
     const crewWithComment = othersRatings.find(rt => rt.comment?.trim());
     if (crewWithComment) {
-      const u = state.users.find(u => u.uid === crewWithComment.user_id);
+      const u    = state.users.find(u => u.uid === crewWithComment.user_id);
       const name = u?.display_name?.split(' ')[0] || '?';
       commentHtml = `<div class="card-comment">${escHtml(name)}: ${escHtml(crewWithComment.comment.trim())}</div>`;
     }
@@ -386,13 +593,15 @@ function closePanel() {
 panelBackdrop?.addEventListener('click', closePanel);
 
 function renderPanel(artist) {
-  const myRating   = getMyRating(artist.id);
-  const crewRatings = getArtistRatings(artist.id).filter(r => r.user_id !== state.user?.uid);
-  const currentRating    = myRating?.rating    || 0;
-  const currentListened  = myRating?.listened  || false;
-  const currentFavorite  = myRating?.want_to_see || false;
-  const currentComment   = myRating?.comment   || '';
-  const currentSeen      = myRating?.seen      || false;
+  const myRating        = getMyRating(artist.id);
+  const crewRatings     = getArtistRatings(artist.id).filter(r => r.user_id !== state.user?.uid);
+  const currentRating   = myRating?.rating    || 0;
+  const currentListened = myRating?.listened  || false;
+  const currentFavorite = myRating?.want_to_see || false;
+  const currentComment  = myRating?.comment   || '';
+  const currentSeen     = myRating?.seen      || false;
+
+  const commentPlaceholder = randomQuote('commentPlaceholders');
 
   const scBtn = artist.soundcloud_url
     ? `<a href="${escHtml(artist.soundcloud_url)}" target="_blank" rel="noopener" class="btn-soundcloud">
@@ -403,15 +612,15 @@ function renderPanel(artist) {
 
   const crewHtml = crewRatings.length > 0
     ? crewRatings.map(r => {
-        const u = state.users.find(u => u.uid === r.user_id);
-        const name = u?.display_name?.split(' ')[0] || '?';
+        const u        = state.users.find(u => u.uid === r.user_id);
+        const name     = u?.display_name?.split(' ')[0] || '?';
         const photoUrl = u?.photo_url || '';
         return `
           <div class="crew-rating-row">
             <div class="crew-avatar">${photoUrl ? `<img src="${escHtml(photoUrl)}" alt="">` : name[0]}</div>
             <span class="crew-name">${escHtml(name)}</span>
             <div class="crew-stars">${renderStarsMini(r.rating || 0)}</div>
-            ${r.comment ? `<span class="crew-comment">${escHtml(r.comment)}</span>` : ''}
+            ${r.comment    ? `<span class="crew-comment">${escHtml(r.comment)}</span>` : ''}
             ${r.want_to_see ? '<span style="color:var(--seed)">♥</span>' : ''}
           </div>`;
       }).join('')
@@ -468,7 +677,7 @@ function renderPanel(artist) {
 
     <div class="comment-section">
       <label>Kommentar</label>
-      <textarea class="comment-textarea" id="comment-input" placeholder="Was denkst du?">${escHtml(currentComment)}</textarea>
+      <textarea class="comment-textarea" id="comment-input" placeholder="${escHtml(commentPlaceholder)}">${escHtml(currentComment)}</textarea>
     </div>
 
     <button class="btn-save" id="btn-save">Speichern</button>
@@ -479,12 +688,10 @@ function renderPanel(artist) {
     </div>
   `;
 
-  // Star-Click
   let selectedRating = currentRating;
   document.querySelectorAll('.star-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const val = parseInt(btn.dataset.star);
-      // Zweimal klicken → deselektieren
       selectedRating = selectedRating === val ? 0 : val;
       document.querySelectorAll('.star-btn').forEach((b, idx) => {
         b.classList.toggle('filled', idx < selectedRating);
@@ -492,7 +699,6 @@ function renderPanel(artist) {
     });
   });
 
-  // Save
   document.getElementById('btn-save')?.addEventListener('click', async () => {
     const btn = document.getElementById('btn-save');
     btn.disabled = true;
@@ -514,18 +720,23 @@ function renderPanel(artist) {
         await saveRating(data);
       } else {
         addPendingRating(data);
-        // Lokal sofort im Cache mergen
         const cached = getCachedRatings();
-        const id = ratingId(data.userId, data.artistId);
-        const idx = cached.findIndex(r => r.id === id);
-        const entry = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false };
+        const id     = ratingId(data.userId, data.artistId);
+        const idx    = cached.findIndex(r => r.id === id);
+        const entry  = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false };
         if (idx >= 0) cached[idx] = entry; else cached.push(entry);
         state.ratings = cached;
         cacheRatings(cached);
         showToast('Offline gespeichert — wird synchronisiert wenn du wieder online bist', 'success');
       }
+
       btn.textContent = 'Gespeichert ✓';
       btn.classList.add('saved');
+
+      // 80er-Quote als Toast je nach Rating
+      if (selectedRating === 5) showToast(randomQuote('fiveStars'));
+      if (selectedRating === 1) showToast(randomQuote('oneStar'));
+
       render();
       setTimeout(closePanel, 800);
     } catch (err) {
@@ -553,7 +764,7 @@ function showToast(msg, type = '') {
     setTimeout(() => {
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 400);
-    }, 3000);
+    }, 3500);
   });
 }
 
@@ -592,6 +803,10 @@ function openProfileModal() {
     ? `<img src="${escHtml(user.photoURL)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover">`
     : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
 
+  const passphraseStatus = hasOfflineHash()
+    ? `<span style="color:var(--success);font-size:0.8rem">✓ Offline-Passphrase eingerichtet</span>`
+    : `<span style="color:var(--warning);font-size:0.8rem">⚠ Noch keine Offline-Passphrase</span>`;
+
   $('profile-content').innerHTML = `
     <div class="profile-header">
       <div class="profile-avatar">${avatarHtml}</div>
@@ -600,8 +815,19 @@ function openProfileModal() {
         <div class="profile-email">${escHtml(user.email || '')}</div>
       </div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      ${passphraseStatus}
+      <button id="btn-change-passphrase" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem">
+        ${hasOfflineHash() ? 'Ändern' : 'Einrichten'}
+      </button>
+    </div>
     <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
   `;
+
+  $('btn-change-passphrase')?.addEventListener('click', () => {
+    closeProfileModal();
+    setTimeout(() => showPassphraseSetup(), 200);
+  });
 
   $('btn-logout-modal')?.addEventListener('click', async () => {
     closeProfileModal();
@@ -621,5 +847,4 @@ function closeProfileModal() {
 
 profileBackdrop?.addEventListener('click', closeProfileModal);
 
-// Initial render (für den Fall dass Daten aus Cache kommen)
 render();
