@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.9 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.9) — Sprint 5 fertig
+Version: 0.10 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.10) — Sprint 5 + 5b fertig, Microsoft Login gebaut
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -438,6 +438,9 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Keine — reines HTML/CSS/JS
 
 11. Bekannte Bugs
+    Microsoft Login Error (ungelöst)
+    Login schlägt fehl nach korrektem Azure + Firebase Setup. Wahrscheinlich fehlt noch eine Konfiguration in Azure (z.B. API permissions oder Redirect URI Mismatch). Nächste Session debuggen.
+
     Weißes Rechteck auf Desktop (ungelöst)
     Ein unsichtbares Element blockiert Mouse-Events auf der Hauptseite (Desktop). Wahrscheinlich ein Firebase Auth Popup-Overlay oder panel-backdrop mit falschem z-index. Diagnose: document.elementFromPoint(x, y) in DevTools-Konsole ausführen.
     Bereits gelöste Bugs
@@ -516,8 +519,8 @@ Warum noch nicht im Prototyp:
     Design System + Tile-Layout-Überarbeitung
     ✅ Fertig (v0.8)
     5
-    Offline-Auth (Passphrase) + 80s-Quotes
-    ✅ Fertig (v0.9)
+    Offline-Auth (Passphrase) + 80s-Quotes + persistenter Crew-Code + Crew-Name + Microsoft Login
+    ✅ Fertig (v0.10)
     6
     Mehrere Festivals + "Gesehen"-Checkbox
     🔲 Mai 2026
