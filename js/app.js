@@ -2,7 +2,7 @@
 
 import {
   auth, db,
-  loginWithGoogle, logout, onAuthChange, ensureUserProfile,
+  loginWithGoogle, loginWithMicrosoft, logout, onAuthChange, ensureUserProfile,
   onArtistsChange, onRatingsChange, onUsersChange,
   saveRating, ratingId, saveOfflineAuthHash
 } from './firebase.js';
@@ -135,6 +135,15 @@ btnLogin?.addEventListener('click', async () => {
     await loginWithGoogle();
   } catch (err) {
     showToast('Login fehlgeschlagen', 'error');
+    console.error(err);
+  }
+});
+
+$('btn-login-microsoft')?.addEventListener('click', async () => {
+  try {
+    await loginWithMicrosoft();
+  } catch (err) {
+    showToast('Microsoft-Login fehlgeschlagen', 'error');
     console.error(err);
   }
 });

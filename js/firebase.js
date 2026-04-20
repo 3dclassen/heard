@@ -22,6 +22,7 @@ import {
 import {
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged
@@ -53,11 +54,17 @@ enableIndexedDbPersistence(db).catch(err => {
 // ── Auth ──
 
 export const googleProvider = new GoogleAuthProvider();
-// Immer Account-Picker zeigen — wichtig für Tests mit mehreren Accounts
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export function loginWithGoogle() {
   return signInWithPopup(auth, googleProvider);
+}
+
+const microsoftProvider = new OAuthProvider('microsoft.com');
+microsoftProvider.setCustomParameters({ prompt: 'select_account' });
+
+export function loginWithMicrosoft() {
+  return signInWithPopup(auth, microsoftProvider);
 }
 
 export function logout() {

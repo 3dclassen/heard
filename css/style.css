@@ -98,6 +98,32 @@ input, textarea {
   flex-shrink: 0;
 }
 
+.btn-microsoft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.btn-microsoft:hover {
+  background: var(--bg-card);
+  border-color: #00a4ef;
+  box-shadow: 0 0 20px rgba(0, 164, 239, 0.2);
+}
+
+.btn-microsoft svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 /* ── App Shell ── */
 
 #app-shell {
