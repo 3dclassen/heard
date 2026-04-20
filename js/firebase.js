@@ -194,6 +194,34 @@ export async function saveOfflineAuthHash(uid, hash) {
   await updateDoc(doc(db, 'users', uid), { offline_auth_hash: hash });
 }
 
+export async function saveCrewName(uid, name) {
+  await updateDoc(doc(db, 'users', uid), { crew_name: name.trim() });
+}
+
+// Gibt den persistenten Einladungs-Code des Users zurück (erstellt ihn wenn nötig).
+// Dieser Code bleibt dauerhaft gültig und kann beliebig oft weitergegeben werden.
+export async function getOrCreatePersistentCode(uid) {
+  const userRef  = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  const userData = userSnap.data();
+
+  if (userData?.invite_code) {
+    // Sicherstellen dass das crew_invites-Dokument noch vorhanden ist
+    const inviteSnap = await getDoc(doc(db, 'crew_invites', userData.invite_code));
+    if (inviteSnap.exists()) return userData.invite_code;
+  }
+
+  const code = generateCode();
+  await setDoc(doc(db, 'crew_invites', code), {
+    creator_uid: uid,
+    created_at:  serverTimestamp(),
+    used:        false,
+    persistent:  true
+  });
+  await updateDoc(userRef, { invite_code: code });
+  return code;
+}
+
 // ── Crew ──
 
 function generateCode() {
@@ -220,8 +248,8 @@ export async function acceptInviteCode(code, uid) {
 
   if (!snap.exists())             throw new Error('CODE_NOT_FOUND');
   const invite = snap.data();
-  if (invite.used)                throw new Error('CODE_USED');
   if (invite.creator_uid === uid) throw new Error('CODE_OWN');
+  if (!invite.persistent && invite.used) throw new Error('CODE_USED');
 
   // Bereits verbunden?
   const q        = query(collection(db, 'crew_connections'), where('members', 'array-contains', uid));
@@ -234,7 +262,8 @@ export async function acceptInviteCode(code, uid) {
     members:    [invite.creator_uid, uid],
     created_at: serverTimestamp()
   });
-  await updateDoc(inviteRef, { used: true });
+  // Persistente Codes bleiben aktiv — Einmal-Codes werden als verwendet markiert
+  if (!invite.persistent) await updateDoc(inviteRef, { used: true });
   return invite.creator_uid;
 }
 
@@ -247,4 +276,4 @@ export function onCrewChange(uid, callback) {
 }
 
 // Re-exports für direkten Import in anderen Modulen
-export { serverTimestamp, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs };
+export { serverTimestamp, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs, query, where };

@@ -31,25 +31,34 @@
     </nav>
 
     <main class="main">
-      <h1 class="page-title">Crew</h1>
+
+      <!-- Crew-Name -->
+      <div class="crew-name-header" id="crew-name-header">
+        <span class="crew-name-display" id="crew-name-display">Meine Crew</span>
+        <button class="crew-name-edit-btn" id="btn-edit-crew-name" title="Crew-Namen ändern">✎</button>
+      </div>
+      <div class="crew-name-edit-row" id="crew-name-edit-row" style="display:none">
+        <input type="text" id="crew-name-input" class="text-input" placeholder="Crew-Name..." maxlength="40">
+        <button class="btn-primary" id="btn-save-crew-name">OK</button>
+      </div>
 
       <!-- Crew-Mitglieder -->
       <div id="crew-members" class="crew-grid"></div>
 
-      <!-- Einladen / Verbinden -->
+      <!-- Dein Einladungs-Code (immer sichtbar) -->
       <div class="invite-section">
         <div class="invite-section-title">Crew erweitern</div>
 
-        <!-- Code generieren -->
-        <p class="invite-hint">Generiere einen Code und schick ihn an dein Crew-Mitglied:</p>
-        <button class="btn-primary" id="btn-generate-code">Code generieren</button>
-
-        <div id="invite-code-box" style="display:none">
-          <div class="invite-code-display">
-            <span class="invite-code-text" id="invite-code-text">------</span>
-            <button class="btn-copy" id="btn-copy-code">Kopieren</button>
-          </div>
+        <p class="invite-hint">Dein persönlicher Crew-Code — schick ihn an wen du willst:</p>
+        <div class="invite-code-display" id="invite-code-box">
+          <span class="invite-code-text" id="invite-code-text">
+            <span class="loader-inline">Lade...</span>
+          </span>
+          <button class="btn-copy" id="btn-copy-code">Kopieren</button>
         </div>
+        <p class="invite-hint" style="font-size:0.78rem;color:var(--text-dim)">
+          Dieser Code bleibt immer gleich — du kannst ihn beliebig oft weitergeben.
+        </p>
 
         <div class="invite-divider">oder</div>
 
