@@ -7,8 +7,6 @@ import {
 import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
 import { myFavorites, sharedFavorites, getMyRating } from './rating.js';
 
-const FESTIVAL_ID = 'modem-2026';
-
 const DAY_ORDER = ['wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = {
   wednesday: 'Mi',
@@ -19,12 +17,13 @@ const DAY_LABELS = {
 };
 
 let state = {
-  user:        null,
-  userProfile: null,
-  artists:     [],
-  ratings:     [],
-  activeDay:   null,
-  unsubscribers: []
+  user:             null,
+  userProfile:      null,
+  artists:          [],
+  ratings:          [],
+  activeDay:        null,
+  activeFestivalId: 'modem-2026',
+  unsubscribers:    []
 };
 
 const $ = id => document.getElementById(id);
@@ -38,6 +37,7 @@ onAuthChange(async user => {
     return;
   }
   state.userProfile = await ensureUserProfile(user);
+  state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
   setupNav();
   startListeners();
 });
@@ -56,11 +56,11 @@ function startListeners() {
     return;
   }
 
-  const u1 = onArtistsChange(FESTIVAL_ID, artists => {
+  const u1 = onArtistsChange(state.activeFestivalId, artists => {
     state.artists = artists;
     render();
   });
-  const u2 = onRatingsChange(FESTIVAL_ID, ratings => {
+  const u2 = onRatingsChange(state.activeFestivalId, ratings => {
     state.ratings = ratings;
     render();
   });

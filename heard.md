@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.10 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.10) — Sprint 5 + 5b fertig, Microsoft Login gebaut
+Version: 0.11 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.11) — Sprint 6a + 6b fertig
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -365,10 +365,11 @@ match /databases/{database}/documents {
    - firebase.js: saveRating unterstützt seen-Feld
    - Offline-Cache ebenfalls seen-aware
 
-✅ Sprint 5 — Offline-Auth (FERTIG, v0.9)
+✅ Sprint 5 — Offline-Auth (FERTIG, v0.10)
 Passphrase-System (offline-auth.js):
 
 Beim ersten Login (mit Internet):
+
 - App schlägt automatisch nach 1,5s Passphrase-Setup vor (nicht blockierend, aber hartnäckig)
 - Vorschlag wird aus Favoriten generiert: "Daniel will GRUB unbedingt live sehen"
 - User tippt auf Vorschlag → übernehmen, oder eigene Passphrase eingeben (min. 6 Zeichen)
@@ -378,36 +379,53 @@ Beim ersten Login (mit Internet):
 - UX-Hinweis: "Schreib sie auf oder schick sie dir per WhatsApp"
 
 Auf dem Festival (ohne Internet):
+
 - App erkennt: kein Internet → zeigt Offline-Login-Screen
 - Personalisierte Begrüßung: "Hey Daniel. Du bist offline."
 - User gibt Passphrase ein → SHA-256 → Vergleich mit lokalem Hash
 - Bei Match: gecachte Daten (Artists, Ratings, Users) aus localStorage geladen, App läuft voll
 
 Profil-Modal:
+
 - Zeigt Passphrase-Status (✓ grün / ⚠ gelb)
 - "Ändern"-Button öffnet Setup erneut
 
 80s-Quotes eingebaut (v0.9):
+
 - Kommentar-Placeholder im Rating-Panel (zufällig, wechselnd)
 - Toast nach 5★ Rating: A-Team / MacGyver
 - Toast nach 1★ Rating: Al Bundy / ALF
 - Offline-Login erfolgreich: Terminator / Knight Rider / Dirty Dancing
 - Passphrase-Setup: ALF / MacGyver / Al Bundy
 - Empty State ohne Daten: Colt Sievers
-🔲 Sprint 6 — Mehrere Festivals
-Festival-Switcher:
+✅ Sprint 6a — Crew-Fixes + Auto-Refresh (FERTIG, v0.10)
+  - Crew-Ansicht: Sterne-über-Tiles-Bug behoben (display:flex-Fix)
+  - Crew-Ansicht: Kommentare jetzt sichtbar in der Artist-Liste
+  - Auto-Refresh: onSnapshot-Listener für Ratings + Users triggern jetzt render() — Änderungen von Crew-Mitgliedern sofort sichtbar
+  - Crew-Code: Invite-Code jedes Crew-Members auf seiner Kachel sichtbar + kopierbarer Button
+  - Klickbare Crew-Kachel: Kachel eines Mitglieds anklicken → gefilterte Ansicht nur seiner Bewertungen. Lila Banner zeigt aktiven Filter. ✕ zum Zurücksetzen.
 
-active_festival_id im User-Profil
-Profil-Menü zeigt alle Festivals des Users
-Festival wechseln → alle Ansichten aktualisieren sich
+✅ Sprint 6b — Mehrere Festivals + Festival-Switcher (FERTIG, v0.11)
+  Festival-Switcher:
+  - active_festival_id im User-Profil (Firebase)
+  - Profil-Menü zeigt aktives Festival (Name + Ort) mit "Wechseln"-Button
+  - Festival-Panel: Liste aller Festivals, aktives markiert mit ✓
+  - Wechseln → alle Listener stoppen, neues Festival aktiv, Artists + Ratings neu laden
+  - Nav-Pill zeigt aktiven Festival-Namen, klickbar → öffnet Festival-Switcher
 
-Vorgefertigte Festivals (Templates):
+  Neues Festival anlegen:
+  - 7 Vorlagen: MODEM, Gondwana, Ozora, Fusion, Bucht der Träumer, Drops, Master of Puppets + "Manuell"
+  - Vorlage wählen → Name + Ort auto-befüllt, Stages gesetzt
+  - Anlegen → Firebase-Dokument erstellt, sofort aktiv
 
-festival_templates Collection in Firebase
-Bekannte Festivals vorausgefüllt: MODEM, Nation of Gondwana, Ozora, Fusion, ...
-Beim Anlegen: aus Liste auswählen oder manuell eingeben
+  Dynamische Stage-Filter:
+  - Stage-Pills aus Festival.stages geladen (nicht mehr hardcoded)
+  - MODEM: weiterhin "The Hive / The Swamp / The Seed"
+  - Andere Festivals: deren Stage-Namen
 
-"Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
+  Alle Seiten (index, crew, timetable): lesen active_festival_id aus User-Profil
+
+  "Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
 🔲 Sprint 7 — Timetable Admin-Flow
 Wenn MODEM den Timetable veröffentlicht (Juli 2026):
 
@@ -441,8 +459,8 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Microsoft Login Error (ungelöst)
     Login schlägt fehl nach korrektem Azure + Firebase Setup. Wahrscheinlich fehlt noch eine Konfiguration in Azure (z.B. API permissions oder Redirect URI Mismatch). Nächste Session debuggen.
 
-    Weißes Rechteck auf Desktop (ungelöst)
-    Ein unsichtbares Element blockiert Mouse-Events auf der Hauptseite (Desktop). Wahrscheinlich ein Firebase Auth Popup-Overlay oder panel-backdrop mit falschem z-index. Diagnose: document.elementFromPoint(x, y) in DevTools-Konsole ausführen.
+    Weißes Rechteck auf Desktop
+    ✅ Gelöst (unbekannt wann — beim Test nicht mehr reproduzierbar)
     Bereits gelöste Bugs
     Service Worker Cache-Invalidierung (automatisches Update alle 60s)
     img src="" Bug im Profil-Panel (jetzt vollständig dynamisch gerendert)
@@ -484,6 +502,7 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
 Idee: Fremde Crews mit ähnlichen musikalischen Vorlieben/Timetables finden und kennenlernen.
 
 Matching-Logik:
+
 - Basis: Überschneidung der want_to_see-Artists zwischen zwei Crews
 - Score: (gemeinsame Favoriten) / (Vereinigung aller Favoriten) = Jaccard-Ähnlichkeit
 - Anzeige: Nicht als %-Zahl sondern als 80er-Referenz-Skala:
@@ -494,16 +513,18 @@ Matching-Logik:
   - 81–100%: "TURBO BOOST. Das ist euer Match."
 
 Match-Flow (Tinder-Mechanismus):
+
 1. User sieht anonymisierte andere Crews mit Score ("Crew XY — 1.21 Gigawatt Potenzial")
 2. User sendet Match-Anfrage (generiert einmaligen Code)
 3. Andere Crew sieht Anfrage, akzeptiert mit eigenem Code
 4. Beide Codes getauscht → Match bestätigt
 5. App generiert vorbereiteten WhatsApp-Deeplink:
    "Hey! Wir sind Crew [Name] — HEARD hat uns gematcht (1.21 Gigawatt ⚡).
-    Wann und wo sehen wir uns? 🎵"
+   Wann und wo sehen wir uns? 🎵"
    → Kein eigener Chat nötig, kein Offline-Problem
 
 Warum noch nicht im Prototyp:
+
 - Nur 3 User beim MODEM 2026 → kein Cross-Crew-Matching möglich
 - Braucht mehrere Crews mit je mehreren Bewertungen (mind. 10 Artists bewertet)
 - Erst nach MODEM wenn mehr User auf der Plattform sind
@@ -521,9 +542,12 @@ Warum noch nicht im Prototyp:
     5
     Offline-Auth (Passphrase) + 80s-Quotes + persistenter Crew-Code + Crew-Name + Microsoft Login
     ✅ Fertig (v0.10)
-    6
-    Mehrere Festivals + "Gesehen"-Checkbox
-    🔲 Mai 2026
+    6a
+    Crew-Fixes (Tiles, Kommentare, Auto-Refresh) + Crew-Code sichtbar + klickbare Crew-Kachel
+    ✅ Fertig (v0.10)
+    6b
+    Mehrere Festivals + Festival-Switcher + Vorlagen + Dynamische Stage-Filter
+    ✅ Fertig (v0.11)
     7
     Timetable Admin-Flow (Foto → OCR → Firebase)
     🔲 Juli 2026

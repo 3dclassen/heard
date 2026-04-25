@@ -11,5 +11,8 @@
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",
     "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

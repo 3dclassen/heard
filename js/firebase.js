@@ -205,6 +205,10 @@ export async function saveCrewName(uid, name) {
   await updateDoc(doc(db, 'users', uid), { crew_name: name.trim() });
 }
 
+export async function saveActiveFestival(uid, festivalId) {
+  await updateDoc(doc(db, 'users', uid), { active_festival_id: festivalId });
+}
+
 // Gibt den persistenten Einladungs-Code des Users zurück (erstellt ihn wenn nötig).
 // Dieser Code bleibt dauerhaft gültig und kann beliebig oft weitergegeben werden.
 export async function getOrCreatePersistentCode(uid) {

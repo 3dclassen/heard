@@ -9,16 +9,16 @@ import {
 import { isOnline } from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
 
-const FESTIVAL_ID = 'modem-2026';
-
 let state = {
-  user:            null,
-  userProfile:     null,
-  crewConnections: [],
-  users:           [],
-  artists:         [],
-  ratings:         [],
-  unsubscribers:   []
+  user:             null,
+  userProfile:      null,
+  crewConnections:  [],
+  users:            [],
+  artists:          [],
+  ratings:          [],
+  filterMember:     null,
+  activeFestivalId: 'modem-2026',
+  unsubscribers:    []
 };
 
 const $ = id => document.getElementById(id);
@@ -53,6 +53,7 @@ onAuthChange(async user => {
   if (!user) { window.location.href = './index.html'; return; }
 
   state.userProfile = await ensureUserProfile(user);
+  state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
   setupNav();
   loadPersistentCode();
   renderCrewName();
@@ -188,12 +189,12 @@ function startListeners() {
     render();
   });
 
-  const u3 = onArtistsChange(FESTIVAL_ID, artists => {
+  const u3 = onArtistsChange(state.activeFestivalId, artists => {
     state.artists = artists;
     render();
   });
 
-  const u4 = onRatingsChange(FESTIVAL_ID, ratings => {
+  const u4 = onRatingsChange(state.activeFestivalId, ratings => {
     state.ratings = ratings;
     render();
   });
@@ -205,6 +206,7 @@ function startListeners() {
 
 function render() {
   renderCrewMembers();
+  renderMemberFilterBanner();
   renderSharedFavorites();
   renderCrewArtistList();
 }
@@ -220,19 +222,72 @@ function renderCrewMembers() {
   if (all.length === 0) { el.innerHTML = ''; return; }
 
   el.innerHTML = all.map(u => {
-    const prog   = ratingProgress(state.ratings, state.artists, u.uid);
-    const isSelf = u.uid === state.user?.uid;
-    const ini    = getInitials(u.display_name);
+    const prog       = ratingProgress(state.ratings, state.artists, u.uid);
+    const isSelf     = u.uid === state.user?.uid;
+    const isFiltered = state.filterMember === u.uid;
+    const ini        = getInitials(u.display_name);
+    const codeHtml   = u.invite_code && !isSelf
+      ? `<div class="crew-member-code">
+           <span class="crew-member-code-text">${esc(u.invite_code)}</span>
+           <button class="btn-copy-mini" data-code="${esc(u.invite_code)}" title="Code kopieren">⧉</button>
+         </div>`
+      : '';
     return `
-      <div class="crew-member-card ${isSelf ? 'self' : ''}">
+      <div class="crew-member-card ${isSelf ? 'self' : 'clickable'} ${isFiltered ? 'filtered' : ''}"
+           data-uid="${esc(u.uid)}">
         ${u.photo_url
           ? `<img class="crew-member-avatar" src="${esc(u.photo_url)}" alt="">`
           : `<div class="crew-member-avatar initials">${esc(ini)}</div>`}
         <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}${isSelf ? ' (Du)' : ''}</div>
         <div class="crew-member-stats">${prog.rated}/${prog.total} bewertet</div>
         <div class="crew-member-stats">${prog.heard} reingehört</div>
+        ${codeHtml}
       </div>`;
   }).join('');
+
+  el.querySelectorAll('.crew-member-card.clickable').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('btn-copy-mini')) return;
+      const uid = card.dataset.uid;
+      state.filterMember = state.filterMember === uid ? null : uid;
+      render();
+    });
+  });
+
+  el.querySelectorAll('.btn-copy-mini').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(btn.dataset.code).then(() => {
+        const prev = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = prev; }, 2000);
+      });
+    });
+  });
+}
+
+function renderMemberFilterBanner() {
+  const el = $('member-filter-banner');
+  if (!el) return;
+  if (!state.filterMember) {
+    el.style.display = 'none';
+    const title = $('crew-list-title');
+    if (title) title.textContent = 'Crew-Bewertungen';
+    return;
+  }
+  const u    = state.users.find(u => u.uid === state.filterMember);
+  const name = u?.display_name?.split(' ')[0] || '?';
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span>Ansicht: <strong>${esc(name)}'s Bewertungen</strong></span>
+    <button class="member-filter-close" title="Zurück zur Crew-Ansicht">✕</button>
+  `;
+  const title = $('crew-list-title');
+  if (title) title.textContent = `${name}'s Bewertungen`;
+  el.querySelector('.member-filter-close').onclick = () => {
+    state.filterMember = null;
+    render();
+  };
 }
 
 function renderSharedFavorites() {
@@ -270,13 +325,20 @@ function renderCrewArtistList() {
   }
 
   const filtered    = crewRatings();
-  const crewVisible = [
-    state.users.find(u => u.uid === state.user?.uid),
-    ...crewUsers()
-  ].filter(Boolean);
+  const memberFilter = state.filterMember;
+  const crewVisible = memberFilter
+    ? [state.users.find(u => u.uid === memberFilter)].filter(Boolean)
+    : [
+        state.users.find(u => u.uid === state.user?.uid),
+        ...crewUsers()
+      ].filter(Boolean);
 
   const ratedArtists = state.artists
-    .filter(a => filtered.some(r => r.artist_id === a.id && (r.rating > 0 || r.want_to_see)))
+    .filter(a => filtered.some(r =>
+      r.artist_id === a.id &&
+      (memberFilter ? r.user_id === memberFilter : true) &&
+      (r.rating > 0 || r.want_to_see)
+    ))
     .sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
   if (ratedArtists.length === 0) {
@@ -309,13 +371,14 @@ function renderCrewArtistList() {
             ).join('')}
           </div>
           ${r.want_to_see ? '<span style="color:var(--seed);font-size:0.8rem">♥</span>' : ''}
+          ${r.comment?.trim() ? `<span class="crew-comment">${esc(r.comment.trim())}</span>` : ''}
         </div>`;
     }).join('');
 
     if (!crewHtml.trim()) return '';
 
     return `
-      <div class="artist-card" style="cursor:default;flex-direction:column;align-items:flex-start;gap:0.75rem">
+      <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;align-items:flex-start;gap:0.75rem">
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
           <span class="artist-name">${esc(a.name)}</span>
           <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>

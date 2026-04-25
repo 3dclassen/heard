@@ -2,3 +2,4 @@ scraper/node_modules/
 scraper/.env
 .DS_Store
 Thumbs.db
+MS_Login.txt

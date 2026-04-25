@@ -158,7 +158,8 @@ input, textarea {
   font-weight: 900;
   letter-spacing: -0.03em;
   color: var(--text);
-  margin-right: auto;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
 }
 
 .nav-logo span {
@@ -168,6 +169,7 @@ input, textarea {
 .nav-links {
   display: flex;
   gap: 0.25rem;
+  margin-left: auto;
 }
 
 .nav-link {
@@ -1286,11 +1288,26 @@ input, textarea {
   border-top: 1px solid var(--border);
 }
 
-/* ── Crew Member Card — Self-Highlight ── */
+/* ── Crew Member Card — Self-Highlight + Clickable ── */
 
 .crew-member-card.self {
   border-color: var(--accent);
   background: rgba(124, 58, 237, 0.05);
+}
+
+.crew-member-card.clickable {
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.crew-member-card.clickable:hover {
+  border-color: var(--border-light);
+  background: var(--bg-surface);
+}
+
+.crew-member-card.filtered {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.08);
 }
 
 .crew-member-avatar.initials {
@@ -1300,6 +1317,70 @@ input, textarea {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-muted);
+}
+
+/* ── Crew Member Code ── */
+
+.crew-member-code {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.crew-member-code-text {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent-light);
+}
+
+.btn-copy-mini {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  padding: 0.1rem 0.2rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition);
+}
+
+.btn-copy-mini:hover {
+  color: var(--accent-light);
+}
+
+/* ── Member Filter Banner ── */
+
+.member-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.875rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--accent-light);
+}
+
+.member-filter-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.member-filter-close:hover {
+  color: var(--text);
 }
 
 /* Profil-Panel per default versteckt — zuverlässiger als nur translateY */
@@ -1523,6 +1604,126 @@ input, textarea {
   border-left: 3px solid var(--accent);
   padding: var(--space-sm) var(--space-md);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ── Nav Festival ── */
+
+.nav-festival {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.25rem 0.625rem;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--transition), border-color var(--transition);
+  margin-right: auto;
+}
+
+.nav-festival:hover {
+  color: var(--accent-light);
+  border-color: var(--accent);
+}
+
+/* ── Profile Festival Row ── */
+
+.profile-festival-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+}
+
+.profile-festival-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Festival List ── */
+
+.festival-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.festival-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  width: 100%;
+}
+
+.festival-list-item:hover {
+  border-color: var(--border-light);
+  background: var(--bg-surface);
+}
+
+.festival-list-item.active {
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.festival-list-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.festival-list-loc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.125rem;
+}
+
+.festival-active-check {
+  color: var(--accent-light);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.festival-create-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.festival-create-btn:hover {
+  color: var(--accent-light);
+  border-color: var(--accent);
+}
+
+/* ── Stage Badge Fallback (unbekannte Stages) ── */
+
+.stage-badge {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--accent-light);
 }
 
 /* ── 80s Quote Hint ── */

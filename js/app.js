@@ -3,8 +3,8 @@
 import {
   auth, db,
   loginWithGoogle, loginWithMicrosoft, logout, onAuthChange, ensureUserProfile,
-  onArtistsChange, onRatingsChange, onUsersChange,
-  saveRating, ratingId, saveOfflineAuthHash
+  onArtistsChange, onRatingsChange, onUsersChange, onFestivalsChange,
+  saveRating, ratingId, saveOfflineAuthHash, saveActiveFestival, saveFestival
 } from './firebase.js';
 
 import {
@@ -23,8 +23,22 @@ import {
 
 // ── Konstante ──
 
-const FESTIVAL_ID = 'modem-2026';
-const APP_VERSION = '0.9';
+const APP_VERSION = '0.10';
+
+const FESTIVAL_STAGE_LABELS = {
+  'modem-2026': { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' }
+};
+
+const FESTIVAL_TEMPLATES = [
+  { name: 'MODEM Festival',       location: 'Kroatien',    stages: ['hive','swamp','seed'] },
+  { name: 'Nation of Gondwana',   location: 'Deutschland', stages: ['main','forest','ambient'] },
+  { name: 'Ozora',                location: 'Ungarn',      stages: ['main','pumpui','dao'] },
+  { name: 'Fusion',               location: 'Deutschland', stages: ['main','coa','turbine'] },
+  { name: 'Bucht der Träumer',    location: 'Deutschland', stages: ['main','forest'] },
+  { name: 'Drops',                location: 'Deutschland', stages: ['main'] },
+  { name: 'Master of Puppets',    location: 'Deutschland', stages: ['main','second'] },
+  { name: 'Manuell eingeben',     location: '',            stages: [] },
+];
 
 // ── 80er-Zitate ──
 
@@ -78,17 +92,19 @@ function randomQuote(key) {
 // ── State ──
 
 let state = {
-  user:        null,
-  userProfile: null,
-  artists:     [],
-  ratings:     [],
-  users:       [],
-  filterStage:  'all',
-  filterStatus: 'all',
-  searchQuery:  '',
-  sortBy:       'name-asc',
-  openArtist:   null,
-  unsubscribers: []
+  user:             null,
+  userProfile:      null,
+  artists:          [],
+  ratings:          [],
+  users:            [],
+  festivals:        [],
+  activeFestivalId: 'modem-2026',
+  filterStage:      'all',
+  filterStatus:     'all',
+  searchQuery:      '',
+  sortBy:           'name-asc',
+  openArtist:       null,
+  unsubscribers:    []
 };
 
 // ── DOM-Refs ──
@@ -161,6 +177,7 @@ onAuthChange(async user => {
   if (user) {
     cacheUserForOffline(user);
     state.userProfile = await ensureUserProfile(user);
+    state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
     showApp();
     startListeners();
     await syncOfflineRatings();
@@ -360,24 +377,32 @@ function showPassphraseSetup() {
 // ── Firestore Listeners ──
 
 function startListeners() {
-  const u1 = onArtistsChange(FESTIVAL_ID, artists => {
+  const u1 = onArtistsChange(state.activeFestivalId, artists => {
     state.artists = artists;
     cacheArtists(artists);
     render();
   });
 
-  const u2 = onRatingsChange(FESTIVAL_ID, ratings => {
+  const u2 = onRatingsChange(state.activeFestivalId, ratings => {
     state.ratings = ratings;
     cacheRatings(ratings);
+    render();
     if (state.openArtist) renderPanel(state.openArtist);
   });
 
   const u3 = onUsersChange(users => {
     state.users = users;
     cacheUsers(users);
+    render();
   });
 
-  state.unsubscribers = [u1, u2, u3];
+  const u4 = onFestivalsChange(festivals => {
+    state.festivals = festivals;
+    updateNavFestival();
+    renderStagePills();
+  });
+
+  state.unsubscribers = [u1, u2, u3, u4];
 }
 
 function stopListeners() {
@@ -417,14 +442,29 @@ searchInput?.addEventListener('input', e => {
   render();
 });
 
-document.querySelectorAll('[data-stage]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    state.filterStage = btn.dataset.stage;
-    document.querySelectorAll('[data-stage]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
+function renderStagePills() {
+  const container = $('stage-pills');
+  if (!container) return;
+
+  const festival = state.festivals.find(f => f.id === state.activeFestivalId);
+  const stages   = festival?.stages || [];
+  const labels   = FESTIVAL_STAGE_LABELS[state.activeFestivalId] || {};
+
+  const stageLabel = s => labels[s] || (s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' '));
+
+  container.innerHTML = `<button class="pill active" data-stage="all">Alle Stages</button>` +
+    stages.map(s => `<button class="pill" data-stage="${escHtml(s)}">${escHtml(stageLabel(s))}</button>`).join('');
+
+  container.querySelectorAll('[data-stage]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.filterStage = btn.dataset.stage;
+      container.querySelectorAll('[data-stage]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+    if (btn.dataset.stage === state.filterStage) btn.classList.add('active');
   });
-});
+}
 
 document.querySelectorAll('[data-status]').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -434,6 +474,153 @@ document.querySelectorAll('[data-status]').forEach(btn => {
     render();
   });
 });
+
+function updateNavFestival() {
+  const btn = $('nav-festival');
+  if (!btn) return;
+  const f = state.festivals.find(f => f.id === state.activeFestivalId);
+  if (!f) { btn.style.display = 'none'; return; }
+  btn.textContent = f.name;
+  btn.style.display = '';
+}
+
+async function switchFestival(festivalId) {
+  if (festivalId === state.activeFestivalId) { closeFestivalPanel(); return; }
+  stopListeners();
+  state.activeFestivalId = festivalId;
+  state.filterStage  = 'all';
+  state.filterStatus = 'all';
+  state.artists      = [];
+  state.ratings      = [];
+  await saveActiveFestival(state.user.uid, festivalId);
+  startListeners();
+  render();
+  closeFestivalPanel();
+  const f = state.festivals.find(f => f.id === festivalId);
+  showToast(`Festival gewechselt: ${f?.name || festivalId}`);
+}
+
+const festivalBackdrop = $('festival-backdrop');
+const festivalPanel    = $('festival-panel');
+
+function openFestivalPanel() {
+  closeProfileModal();
+  renderFestivalList();
+  festivalBackdrop?.classList.add('open');
+  festivalPanel?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFestivalPanel() {
+  festivalBackdrop?.classList.remove('open');
+  festivalPanel?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+festivalBackdrop?.addEventListener('click', closeFestivalPanel);
+$('nav-festival')?.addEventListener('click', openFestivalPanel);
+
+function renderFestivalList() {
+  $('festival-content').innerHTML = `
+    <div class="panel-header" style="margin-bottom:1rem">
+      <div class="panel-artist-name" style="font-size:1.1rem">Festival wechseln</div>
+    </div>
+    <div class="festival-list">
+      ${state.festivals.map(f => `
+        <button class="festival-list-item ${f.id === state.activeFestivalId ? 'active' : ''}"
+                data-fid="${escHtml(f.id)}">
+          <div class="festival-list-name">${escHtml(f.name)}</div>
+          <div class="festival-list-loc">${escHtml(f.location || '')}</div>
+          ${f.id === state.activeFestivalId ? '<span class="festival-active-check">✓</span>' : ''}
+        </button>`).join('')}
+    </div>
+    <button class="festival-create-btn" id="btn-festival-create">+ Neues Festival anlegen</button>
+  `;
+
+  $('festival-content').querySelectorAll('.festival-list-item').forEach(btn => {
+    btn.addEventListener('click', () => switchFestival(btn.dataset.fid));
+  });
+
+  $('btn-festival-create')?.addEventListener('click', renderFestivalCreate);
+}
+
+function renderFestivalCreate() {
+  const year = new Date().getFullYear();
+  $('festival-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
+      <button id="btn-festival-back" style="color:var(--text-muted);font-size:1.1rem;background:none;padding:0.25rem">←</button>
+      <div class="panel-artist-name" style="font-size:1.1rem">Neues Festival</div>
+    </div>
+    <div class="input-group">
+      <label>Vorlage</label>
+      <select id="festival-template-select" class="select-input">
+        ${FESTIVAL_TEMPLATES.map((t,i) => `<option value="${i}">${escHtml(t.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Name</label>
+      <input type="text" id="festival-name-input" class="text-input" placeholder="Festival-Name..." maxlength="60">
+    </div>
+    <div class="input-group">
+      <label>Ort / Land</label>
+      <input type="text" id="festival-location-input" class="text-input" placeholder="z.B. Kroatien" maxlength="60">
+    </div>
+    <div class="input-group">
+      <label>Jahr</label>
+      <input type="number" id="festival-year-input" class="text-input" value="${year}" min="2020" max="2099">
+    </div>
+    <button class="btn-save" id="btn-festival-save">Festival anlegen</button>
+    <p id="festival-create-error" style="color:var(--danger);font-size:0.85rem;display:none;margin-top:0.5rem"></p>
+  `;
+
+  const templateSel  = $('festival-template-select');
+  const nameInput    = $('festival-name-input');
+  const locInput     = $('festival-location-input');
+
+  const applyTemplate = () => {
+    const t = FESTIVAL_TEMPLATES[parseInt(templateSel.value)];
+    if (t.name !== 'Manuell eingeben') {
+      nameInput.value = t.name;
+      locInput.value  = t.location;
+    }
+  };
+  templateSel?.addEventListener('change', applyTemplate);
+  applyTemplate();
+
+  $('btn-festival-back')?.addEventListener('click', renderFestivalList);
+
+  $('btn-festival-save')?.addEventListener('click', async () => {
+    const name     = nameInput?.value.trim();
+    const location = locInput?.value.trim();
+    const year     = parseInt($('festival-year-input')?.value) || new Date().getFullYear();
+    const errEl    = $('festival-create-error');
+
+    if (!name) {
+      errEl.textContent = 'Bitte einen Festival-Namen eingeben.';
+      errEl.style.display = '';
+      return;
+    }
+
+    const tpl    = FESTIVAL_TEMPLATES[parseInt(templateSel.value)];
+    const stages = tpl.stages.length ? tpl.stages : ['main'];
+    const btn    = $('btn-festival-save');
+    btn.disabled = true;
+    btn.textContent = 'Wird angelegt...';
+
+    try {
+      const festivalId = await saveFestival(null, {
+        name, location, stages, year,
+        created_by: state.user.uid
+      });
+      await switchFestival(festivalId);
+    } catch (err) {
+      errEl.textContent = 'Fehler: ' + err.message;
+      errEl.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Festival anlegen';
+    }
+  });
+}
 
 document.querySelectorAll('[data-sort]').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -716,7 +903,7 @@ function renderPanel(artist) {
     const data = {
       userId:      state.user.uid,
       artistId:    artist.id,
-      festivalId:  FESTIVAL_ID,
+      festivalId:  state.activeFestivalId,
       rating:      selectedRating,
       comment:     document.getElementById('comment-input')?.value || '',
       listened:    document.getElementById('toggle-listened')?.checked || false,
@@ -780,8 +967,8 @@ function showToast(msg, type = '') {
 // ── Hilfsfunktionen ──
 
 function stageDisplayName(stage) {
-  const map = { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' };
-  return map[stage] || stage;
+  const labels = FESTIVAL_STAGE_LABELS[state.activeFestivalId] || {};
+  return labels[stage] || (stage.charAt(0).toUpperCase() + stage.slice(1).replace(/-/g, ' '));
 }
 
 function getInitials(name) {
@@ -816,6 +1003,8 @@ function openProfileModal() {
     ? `<span style="color:var(--success);font-size:0.8rem">✓ Offline-Passphrase eingerichtet</span>`
     : `<span style="color:var(--warning);font-size:0.8rem">⚠ Noch keine Offline-Passphrase</span>`;
 
+  const activeFestival = state.festivals.find(f => f.id === state.activeFestivalId);
+
   $('profile-content').innerHTML = `
     <div class="profile-header">
       <div class="profile-avatar">${avatarHtml}</div>
@@ -823,6 +1012,13 @@ function openProfileModal() {
         <div class="profile-name">${escHtml(user.displayName || '—')}</div>
         <div class="profile-email">${escHtml(user.email || '')}</div>
       </div>
+    </div>
+    <div class="profile-festival-row">
+      <div>
+        <div class="profile-festival-name">${escHtml(activeFestival?.name || state.activeFestivalId)}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${escHtml(activeFestival?.location || '')}</div>
+      </div>
+      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">Wechseln</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
       ${passphraseStatus}
@@ -832,6 +1028,8 @@ function openProfileModal() {
     </div>
     <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
   `;
+
+  $('btn-switch-festival')?.addEventListener('click', openFestivalPanel);
 
   $('btn-change-passphrase')?.addEventListener('click', () => {
     closeProfileModal();
