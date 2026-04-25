@@ -226,7 +226,7 @@ function renderCrewMembers() {
     const isSelf     = u.uid === state.user?.uid;
     const isFiltered = state.filterMember === u.uid;
     const ini        = getInitials(u.display_name);
-    const codeHtml   = u.invite_code && !isSelf
+    const codeHtml   = u.invite_code
       ? `<div class="crew-member-code">
            <span class="crew-member-code-text">${esc(u.invite_code)}</span>
            <button class="btn-copy-mini" data-code="${esc(u.invite_code)}" title="Code kopieren">⧉</button>

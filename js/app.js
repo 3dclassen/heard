@@ -23,7 +23,7 @@ import {
 
 // ── Konstante ──
 
-const APP_VERSION = '0.10';
+const APP_VERSION = '0.11';
 
 const FESTIVAL_STAGE_LABELS = {
   'modem-2026': { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' }
