@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.12 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.12) — Sprint 6c fertig (Crew-Modell Migration)
+Version: 0.13 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.13) — Sprint 6d fertig (Fixes + MOYN Import)
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -11,16 +11,20 @@ Kern-Versprechen: Nie wieder Artists verpassen weil du nicht weisst wer gut ist.
 2. Kontext & Ausgangslage
    Bisher: Line-Up manuell durchgehört, Excel-Tabelle gepflegt, ausgedruckt, fotografiert, als Foto auf dem Handy mitgenommen. Kein Vergleich mit Festivalbegleiter\*innen möglich.
 
-Prototyp: MODEM Festival 2026 (Kroatien, Juli 2026) Drei Stages: The Hive, The Swamp, The Seed Line-Up 2026 bereits online unter:
+Aktive Festivals im Prototyp:
 
-https://modemfestival.com/the-hive/
-https://modemfestival.com/the-swamp/
-https://modemfestival.com/the-seed/
+MODEM Festival 2026 (Kroatien, Juli 2026)
+  Stages: The Hive, The Swamp, The Seed
+  Line-Up: https://modemfestival.com/the-hive/ | /the-swamp/ | /the-seed/
+  Artists + SoundCloud-Links via Scraper in Firebase. Timetable folgt Juli 2026.
 
-Artists + SoundCloud-Links sind bereits via Scraper in Firebase importiert. Timetable (Zeiten) kommt erst wenige Tage vor dem Festival im Juli 2026.
+MOYN Festival 2026 (Deutschland)
+  Line-Up: https://moynfestival.de/line-up/
+  83 Artists via Scraper importiert (scraper/scrape-moyn.js). Stages werden
+  nachgetragen sobald MOYN sie veröffentlicht (Batch-Update-Script, Ratings bleiben erhalten).
 
 3. Zielgruppe
-   Prototyp: Daniel + 2 Festivalbegleiterinnen (3 Nutzerinnen)
+   Prototyp: Daniel + 3 Festivalbegleiter*innen (4 User)
    v1: Beliebig viele Nutzer\*innen, mehrere Festivals
    Technisches Niveau: Normale Smartphone-Nutzung, kein technisches Wissen erforderlich
 
@@ -407,7 +411,7 @@ Profil-Modal:
   - Nav-Pill zeigt aktiven Festival-Namen, klickbar → öffnet Festival-Switcher
 
   Neues Festival anlegen:
-  - 7 Vorlagen: MODEM, Gondwana, Ozora, Fusion, Bucht der Träumer, Drops, Master of Puppets + "Manuell"
+  - 8 Vorlagen: MODEM, Gondwana, Ozora, Fusion, Bucht der Träumer, Drops, Master of Puppets, MOYN + "Manuell"
   - Vorlage wählen → Name + Ort auto-befüllt, Stages gesetzt
   - Anlegen → Firebase-Dokument erstellt, sofort aktiv
 
@@ -438,6 +442,37 @@ Profil-Modal:
   - users.invite_code Feld
   - users.crew_name Feld
 
+✅ Sprint 6d — Fixes + MOYN Import (FERTIG, v0.13)
+  Navigation & Responsive:
+  - Logo "HEARD" → "HD" auf Screens < 480px (CSS: .nav-logo-ear wird versteckt)
+  - Logo ist jetzt Link auf index.html (alle Seiten)
+  - Nav-Links kompakter auf Mobile (kleinere Padding + Schrift)
+  - Festival-Pill auf 72px begrenzt auf Mobile
+  - Profile-Email: word-break fix (kein Overflow mehr im Profil-Panel)
+  - Invite-Code-Display: flex-wrap auf kleinen Screens (Code + Buttons umbrechen)
+  - Bekanntes Restproblem: Nav auf sehr kleinen Screens (< 360px) noch leicht zu breit
+    → Lösung: Icons oder Burger-Menü (niedrige Prio, nach MODEM)
+
+  Crew Member Filter UX:
+  - Klick auf Crew-Mitglied → automatischer Smooth-Scroll zur Bewertungsliste
+  - Vorher: Filter war aktiv aber nicht sichtbar (man musste selbst scrollen)
+
+  MOYN Festival:
+  - scraper/scrape-moyn.js erstellt: scrapt https://moynfestival.de/line-up/
+  - Bereinigung: 99 → 83 Artists (B2B-Suffixe, doppelte SoundCloud-URLs, Event-Reihen entfernt)
+  - festivals/moyn-2026 + 83 Artists in Firebase importiert
+  - MOYN zu FESTIVAL_TEMPLATES in app.js hinzugefügt (Stages: main/forest/silent als Platzhalter)
+  - npm run scrape:moyn:dry / scrape:moyn als Scripts in scraper/package.json
+
+  Festival-Switcher Bug Fix:
+  - festivals/modem-2026 Dokument fehlte in Firestore (Scraper hatte nur Artists angelegt)
+  - MODEM erschien deshalb nicht in der Festival-Wechseln-Liste
+  - Dokument nachträglich angelegt → MODEM ↔ MOYN Wechsel funktioniert
+
+  Firebase Security Rules:
+  - crews Collection: read/create/update/delete für Members, create nur mit creator_uid == auth.uid
+  - crew_invites + crew_connections Rules entfernt (deprecated)
+
 🔲 Sprint 7 — Timetable Admin-Flow
 Wenn MODEM den Timetable veröffentlicht (Juli 2026):
 
@@ -467,16 +502,26 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Frameworks
     Keine — reines HTML/CSS/JS
 
-11. Bekannte Bugs
+11. Bekannte Bugs & offene Punkte
     Microsoft Login Error (ungelöst)
     Login schlägt fehl nach korrektem Azure + Firebase Setup. Wahrscheinlich fehlt noch eine Konfiguration in Azure (z.B. API permissions oder Redirect URI Mismatch). Nächste Session debuggen.
 
-    Weißes Rechteck auf Desktop
-    ✅ Gelöst (unbekannt wann — beim Test nicht mehr reproduzierbar)
+    Nav auf sehr kleinen Screens (< 360px) noch leicht zu breit (Kosmetik)
+    Alle 3 Links passen knapp nicht. Lösung: Icons oder Burger-Menü. Niedrige Prio — nach MODEM angehen.
+
+    MOYN Stages fehlen noch
+    Alle 83 Artists haben stage: 'main'. Sobald MOYN die Stages veröffentlicht:
+    1. Mapping erstellen (Artist → Stage), z.B. als Liste
+    2. Batch-Update-Script ausführen (Ratings bleiben dabei 100% erhalten — Rating-Dokumente
+       referenzieren nur artist_id, nicht den Stage-Namen)
+    3. festivals/moyn-2026 stages-Array aktualisieren
+
     Bereits gelöste Bugs
-    Service Worker Cache-Invalidierung (automatisches Update alle 60s)
-    img src="" Bug im Profil-Panel (jetzt vollständig dynamisch gerendert)
-    APP_VERSION / SW-Version Mismatch (beide jetzt v0.8)
+    ✅ Festival-Switcher: MODEM fehlte in der Liste (festivals/modem-2026 Dokument nachgelegt)
+    ✅ Weißes Rechteck auf Desktop (unbekannt wann gelöst)
+    ✅ Service Worker Cache-Invalidierung (automatisches Update alle 60s)
+    ✅ img src="" Bug im Profil-Panel
+    ✅ APP_VERSION / SW-Version Mismatch
 
 12. Backlog (nach MODEM)
     Feature
@@ -571,6 +616,9 @@ Warum noch nicht im Prototyp:
     6c
     Crew-Modell Migration: crews/{id}, ein Code, Crew erstellen/beitreten/verlassen
     ✅ Fertig (v0.12)
+    6d
+    Fixes: Nav-Responsive, Logo-Link, Crew-Scroll, MOYN-Import, Festival-Switcher-Bug
+    ✅ Fertig (v0.13)
     7
     Timetable Admin-Flow (Foto → OCR → Firebase)
     🔲 Juli 2026
