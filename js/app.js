@@ -37,6 +37,7 @@ const FESTIVAL_TEMPLATES = [
   { name: 'Bucht der Träumer',    location: 'Deutschland', stages: ['main','forest'] },
   { name: 'Drops',                location: 'Deutschland', stages: ['main'] },
   { name: 'Master of Puppets',    location: 'Deutschland', stages: ['main','second'] },
+  { name: 'MOYN Festival',        location: 'Deutschland', stages: ['main','forest','silent'] },
   { name: 'Manuell eingeben',     location: '',            stages: [] },
 ];
 

@@ -1,102 +1,147 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0a10">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="HEARD">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./css/style.css">
-  <title>HEARD — Crew</title>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a10" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HEARD" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <title>HEARD — Crew</title>
+  </head>
+  <body>
+    <div id="app-shell" class="visible">
+      <div class="offline-banner" id="offline-banner"></div>
 
-  <div id="app-shell" class="visible">
-    <div class="offline-banner" id="offline-banner"></div>
-
-    <nav class="nav">
-      <span class="nav-logo">HEAR<span>D</span></span>
-      <div class="nav-links">
-        <a href="./index.html"     class="nav-link">Artists</a>
-        <a href="./timetable.html" class="nav-link">Timetable</a>
-        <a href="./crew.html"      class="nav-link active">Crew</a>
-        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
-      </div>
-      <div class="nav-avatar" id="nav-avatar">
-        <img id="nav-avatar-img" src="" alt="Avatar">
-      </div>
-    </nav>
-
-    <main class="main">
-
-      <!-- Crew-Name -->
-      <div class="crew-name-header" id="crew-name-header">
-        <span class="crew-name-display" id="crew-name-display">Meine Crew</span>
-        <button class="crew-name-edit-btn" id="btn-edit-crew-name" title="Crew-Namen ändern">✎</button>
-      </div>
-      <div class="crew-name-edit-row" id="crew-name-edit-row" style="display:none">
-        <input type="text" id="crew-name-input" class="text-input" placeholder="Crew-Name..." maxlength="40">
-        <button class="btn-primary" id="btn-save-crew-name">OK</button>
-      </div>
-
-      <!-- Crew-Mitglieder -->
-      <div id="crew-members" class="crew-grid"></div>
-
-      <!-- Dein Einladungs-Code (immer sichtbar) -->
-      <div class="invite-section">
-        <div class="invite-section-title">Crew erweitern</div>
-
-        <p class="invite-hint">Dein persönlicher Crew-Code — schick ihn an wen du willst:</p>
-        <div class="invite-code-display" id="invite-code-box">
-          <span class="invite-code-text" id="invite-code-text">
-            <span class="loader-inline">Lade...</span>
-          </span>
-          <button class="btn-copy" id="btn-copy-code">Kopieren</button>
+      <nav class="nav">
+        <a href="./index.html" class="nav-logo">H<span class="nav-logo-ear">EAR</span><span>D</span></a>
+        <div class="nav-links">
+          <a href="./index.html" class="nav-link">Artists</a>
+          <a href="./timetable.html" class="nav-link">Timetable</a>
+          <a href="./crew.html" class="nav-link active">Crew</a>
+          <a href="./admin.html" class="nav-link" id="nav-admin" style="display:none">Admin</a>
         </div>
-        <p class="invite-hint" style="font-size:0.78rem;color:var(--text-dim)">
-          Dieser Code bleibt immer gleich — du kannst ihn beliebig oft weitergeben.
-        </p>
-
-        <div class="invite-divider">oder</div>
-
-        <!-- Code eingeben -->
-        <p class="invite-hint">Gib einen Code ein den du erhalten hast:</p>
-        <div style="display:flex;gap:0.5rem">
-          <input
-            type="text"
-            id="invite-input"
-            class="text-input invite-code-input"
-            placeholder="ABC123"
-            maxlength="8"
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
-          >
-          <button class="btn-primary" id="btn-accept-code">Verbinden</button>
+        <div class="nav-avatar" id="nav-avatar">
+          <img id="nav-avatar-img" src="" alt="Avatar" />
         </div>
-        <p id="invite-feedback" style="font-size:0.8rem;margin-top:0.5rem;min-height:1.2em"></p>
-      </div>
+      </nav>
 
-      <!-- Gemeinsame Favoriten -->
-      <div id="shared-section" style="display:none">
-        <h2 class="section-title">Alle wollen sehen 🔥</h2>
-        <div id="shared-favorites" class="artist-list" style="margin-bottom:1.5rem"></div>
-      </div>
+      <main class="main">
 
-      <!-- Artist-Liste mit Crew-Ratings -->
-      <h2 class="section-title" id="crew-list-title">Crew-Bewertungen</h2>
-      <div id="member-filter-banner" class="member-filter-banner" style="display:none"></div>
-      <div id="crew-artist-list" class="artist-list">
-        <div class="loader"><div class="spinner"></div> Lade...</div>
-      </div>
-    </main>
+        <!-- ── State: Noch in keiner Crew ── -->
+        <div id="no-crew-section">
+          <p class="invite-hint" style="text-align:center;margin-bottom:1.5rem;color:var(--text-dim)">
+            Du bist noch in keiner Crew für dieses Festival.
+          </p>
 
-    <button id="btn-logout" style="display:none"></button>
-  </div>
+          <div class="invite-section">
+            <div class="invite-section-title">Neue Crew erstellen</div>
+            <p class="invite-hint">Gib deiner Crew einen Namen und teile den generierten Code:</p>
+            <div style="display:flex;gap:0.5rem">
+              <input
+                type="text"
+                id="crew-create-name-input"
+                class="text-input"
+                placeholder="z.B. Die Hive-Fraktion"
+                maxlength="40"
+                autocomplete="off"
+              />
+              <button class="btn-primary" id="btn-create-crew">Crew erstellen</button>
+            </div>
+          </div>
 
-  <script type="module" src="./js/crew.js"></script>
-</body>
+          <div class="invite-divider">oder</div>
+
+          <div class="invite-section">
+            <div class="invite-section-title">Crew beitreten</div>
+            <p class="invite-hint">Gib den Code ein den du von jemandem erhalten hast:</p>
+            <div style="display:flex;gap:0.5rem">
+              <input
+                type="text"
+                id="invite-input"
+                class="text-input invite-code-input"
+                placeholder="ABC123"
+                maxlength="8"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+              />
+              <button class="btn-primary" id="btn-accept-code">Beitreten</button>
+            </div>
+          </div>
+
+          <p id="invite-feedback" style="font-size:0.8rem;margin-top:0.5rem;min-height:1.2em;text-align:center"></p>
+        </div>
+
+        <!-- ── State: In einer Crew ── -->
+        <div id="in-crew-section" style="display:none">
+
+          <!-- Crew-Name -->
+          <div class="crew-name-header" id="crew-name-header">
+            <span class="crew-name-display" id="crew-name-display">Meine Crew</span>
+            <button class="crew-name-edit-btn" id="btn-edit-crew-name" title="Crew-Namen ändern">✎</button>
+          </div>
+          <div class="crew-name-edit-row" id="crew-name-edit-row" style="display:none">
+            <input
+              type="text"
+              id="crew-name-input"
+              class="text-input"
+              placeholder="Crew-Name..."
+              maxlength="40"
+            />
+            <button class="btn-primary" id="btn-save-crew-name">OK</button>
+          </div>
+
+          <!-- Crew-Mitglieder -->
+          <div id="crew-members" class="crew-grid"></div>
+
+          <!-- Crew-Code -->
+          <div class="invite-section">
+            <div class="invite-section-title">Crew erweitern</div>
+            <p class="invite-hint">Teile diesen Code mit Freunden — er bleibt immer gleich:</p>
+            <div class="invite-code-display" id="invite-code-box">
+              <span class="invite-code-text" id="invite-code-text">—</span>
+              <button class="btn-copy" id="btn-copy-code">Kopieren</button>
+              <button id="btn-regen-code" style="display:none;background:none;border:1px solid var(--accent);color:var(--accent);padding:0.3rem 0.7rem;border-radius:6px;font-size:0.8rem;cursor:pointer" title="Neuen Code generieren">↻ Neu</button>
+            </div>
+          </div>
+
+          <!-- Crew verlassen -->
+          <div style="text-align:center;margin:0.5rem 0 1.5rem">
+            <button id="btn-leave-crew" style="
+              background:none;
+              border:1px solid var(--danger);
+              color:var(--danger);
+              padding:0.4rem 1rem;
+              border-radius:6px;
+              font-size:0.8rem;
+              cursor:pointer;
+            ">Crew verlassen</button>
+          </div>
+
+          <!-- Gemeinsame Favoriten -->
+          <div id="shared-section" style="display:none">
+            <h2 class="section-title">Alle wollen sehen 🔥</h2>
+            <div id="shared-favorites" class="artist-list" style="margin-bottom:1.5rem"></div>
+          </div>
+
+          <!-- Artist-Liste mit Crew-Ratings -->
+          <h2 class="section-title" id="crew-list-title">Crew-Bewertungen</h2>
+          <div id="member-filter-banner" class="member-filter-banner" style="display:none"></div>
+          <div id="crew-artist-list" class="artist-list">
+            <div class="loader"><div class="spinner"></div> Lade...</div>
+          </div>
+
+        </div><!-- /in-crew-section -->
+
+      </main>
+
+      <button id="btn-logout" style="display:none"></button>
+    </div>
+
+    <script type="module" src="./js/crew.js"></script>
+  </body>
 </html>

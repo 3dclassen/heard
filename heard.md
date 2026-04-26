@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.11 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.11) — Sprint 6a + 6b fertig
+Version: 0.12 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.12) — Sprint 6c fertig (Crew-Modell Migration)
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -225,38 +225,33 @@ offline_auth_hash
 string
 ⚡ SHA-256 Hash der Passphrase (neu, Sprint 5)
 
-7.5 crew_invites/{code}
-Feld
-Typ
-Beschreibung
-id
-string
-Der 6-stellige Code selbst
-creator_uid
-string
-Firebase Auth UID des Einladenden
-created_at
-timestamp
-Auto
-used
-boolean
-true sobald eingelöst
-
-7.6 crew_connections/{connId}
+7.5 crews/{crewId}
 Feld
 Typ
 Beschreibung
 id
 string
 Auto (Firebase)
+name
+string
+Crew-Name (z.B. "Die Hive-Fraktion")
+code
+string
+Wiederverwendbarer 6-stelliger Code
 members
 array
-Zwei Firebase Auth UIDs
+Liste aller UIDs
+created_by
+string
+UID des Erstellers (= Admin)
+festival_id
+string
+Referenz auf Festival
 created_at
 timestamp
 Auto
 
-Hinweis: Migration zu crews/{crewId} mit Team-Name geplant für v1, nicht Prototyp.
+Hinweis: Pro Festival ist ein User in max. einer Crew. crew_connections und crew_invites sind deprecated (Altdaten, werden nicht mehr gelesen).
 
 8. Firebase Security Rules
    rules_version = '2';
@@ -303,19 +298,7 @@ match /databases/{database}/documents {
 
     }
 
-    match /crew_invites/{code} {
-
-      allow read: if request.auth != null;
-
-      allow create: if request.auth != null &&
-
-        request.resource.data.creator_uid == request.auth.uid;
-
-      allow update: if request.auth != null;
-
-    }
-
-    match /crew_connections/{connId} {
+    match /crews/{crewId} {
 
       allow read: if request.auth != null &&
 
@@ -323,7 +306,17 @@ match /databases/{database}/documents {
 
       allow create: if request.auth != null &&
 
-        request.auth.uid in request.resource.data.members;
+        request.auth.uid in request.resource.data.members &&
+
+        request.resource.data.created_by == request.auth.uid;
+
+      allow update: if request.auth != null &&
+
+        request.auth.uid in resource.data.members;
+
+      allow delete: if request.auth != null &&
+
+        request.auth.uid in resource.data.members;
 
     }
 
@@ -426,6 +419,25 @@ Profil-Modal:
   Alle Seiten (index, crew, timetable): lesen active_festival_id aus User-Profil
 
   "Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
+✅ Sprint 6c — Crew-Modell Migration (FERTIG, v0.12)
+  Neues Datenmodell crews/{crewId}:
+  - Eine Crew = ein persistenter Code für alle Members
+  - Crew-Name auf der Crew, nicht pro User
+  - Admin = Ersteller (kann Code neu generieren)
+  - Crew verlassen: Members-Array aktualisiert, leere Crew wird gelöscht, Admin-Transfer bei Verlassen
+  - Pro Festival: max. eine Crew pro User (Schutz in joinCrewByCode + createCrew)
+
+  UI-States:
+  - Noch keine Crew: "Crew erstellen" (Name eingeben) ODER "Beitreten" (Code eingeben)
+  - In einer Crew: Name, Members, Code (Kopieren + Neu generieren für Admin), Crew verlassen
+  - Crew-Admin erkennbar am ★ auf der Mitglieder-Kachel
+
+  Deprecated (nicht gelöscht, werden aber nicht mehr gelesen):
+  - crew_connections Collection
+  - crew_invites Collection
+  - users.invite_code Feld
+  - users.crew_name Feld
+
 🔲 Sprint 7 — Timetable Admin-Flow
 Wenn MODEM den Timetable veröffentlicht (Juli 2026):
 
@@ -445,7 +457,7 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Offline-Auth
     Passphrase + SHA-256, eigenes Modul offline-auth.js
     Crew-Modell
-    Prototyp: crew_connections (1:1). v1: crews/{id} mit Team-Name + wiederverwendbarem Code
+    crews/{id}: ein Code für alle, Members-Array, Admin = Ersteller, max. 1 Crew pro Festival pro User
     Timetable
     Admin-only, kein kollaboratives Editing
     Mehrere Festivals
@@ -470,6 +482,9 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Feature
     Aufwand
     Prio
+    ✅ Crew-Modell Migration: ein Code für alle
+    —
+    v0.12
     Crew-Match zwischen fremden Crews (Ähnlichkeits-Score) — DETAILKONZEPT UNTEN
     Mittel
     v1
@@ -498,7 +513,12 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Mittel
     v2
 
-12a. Crew-Match — Detailkonzept (v1, nach MODEM)
+12a. Crew-Modell Migration — ABGESCHLOSSEN (v0.12)
+Umgesetzt in Sprint 6c. Crew-Mitgliedschaft wird aus dem crews-Dokument abgeleitet
+(members-Array enthält UID). Kein crew_id-Feld im User-Profil nötig — Lookup via
+Firestore-Query: where('members', 'array-contains', uid).
+
+12b. Crew-Match — Detailkonzept (v1, nach MODEM, setzt 12a voraus)
 Idee: Fremde Crews mit ähnlichen musikalischen Vorlieben/Timetables finden und kennenlernen.
 
 Matching-Logik:
@@ -548,6 +568,9 @@ Warum noch nicht im Prototyp:
     6b
     Mehrere Festivals + Festival-Switcher + Vorlagen + Dynamische Stage-Filter
     ✅ Fertig (v0.11)
+    6c
+    Crew-Modell Migration: crews/{id}, ein Code, Crew erstellen/beitreten/verlassen
+    ✅ Fertig (v0.12)
     7
     Timetable Admin-Flow (Foto → OCR → Firebase)
     🔲 Juli 2026

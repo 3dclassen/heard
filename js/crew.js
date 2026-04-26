@@ -3,8 +3,8 @@
 import {
   auth, onAuthChange, ensureUserProfile, logout,
   onArtistsChange, onRatingsChange, onUsersChange,
-  acceptInviteCode, onCrewChange,
-  getOrCreatePersistentCode, saveCrewName
+  createCrew, joinCrewByCode, leaveCrew, regenerateCrewCode,
+  onCrewChange, saveCrewName
 } from './firebase.js';
 import { isOnline } from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
@@ -12,7 +12,7 @@ import { sharedFavorites, ratingProgress } from './rating.js';
 let state = {
   user:             null,
   userProfile:      null,
-  crewConnections:  [],
+  crew:             null,   // aktive Crew für dieses Festival
   users:            [],
   artists:          [],
   ratings:          [],
@@ -26,14 +26,13 @@ const $ = id => document.getElementById(id);
 // ── Abgeleitete Helfer ──
 
 function crewMemberIds() {
-  if (!state.user) return [];
-  return state.crewConnections
-    .flatMap(c => c.members)
-    .filter(uid => uid !== state.user.uid);
+  if (!state.crew || !state.user) return [];
+  return state.crew.members.filter(uid => uid !== state.user.uid);
 }
 
 function myCrewUserIds() {
-  return [state.user?.uid, ...crewMemberIds()].filter(Boolean);
+  if (!state.crew) return [state.user?.uid].filter(Boolean);
+  return state.crew.members;
 }
 
 function crewUsers() {
@@ -46,6 +45,10 @@ function crewRatings() {
   return state.ratings.filter(r => ids.includes(r.user_id));
 }
 
+function isAdmin() {
+  return state.crew?.created_by === state.user?.uid;
+}
+
 // ── Auth ──
 
 onAuthChange(async user => {
@@ -55,8 +58,6 @@ onAuthChange(async user => {
   state.userProfile = await ensureUserProfile(user);
   state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
   setupNav();
-  loadPersistentCode();
-  renderCrewName();
   startListeners();
 });
 
@@ -72,19 +73,13 @@ function setupNav() {
   }
 }
 
-// ── Crew-Name ──
-
-function renderCrewName() {
-  const name = state.userProfile?.crew_name || 'Meine Crew';
-  const el   = $('crew-name-display');
-  if (el) el.textContent = name;
-}
+// ── Crew-Name bearbeiten ──
 
 $('btn-edit-crew-name')?.addEventListener('click', () => {
   const row   = $('crew-name-edit-row');
   const input = $('crew-name-input');
   if (!row || !input) return;
-  input.value = state.userProfile?.crew_name || '';
+  input.value = state.crew?.name || '';
   row.style.display = 'flex';
   input.focus();
   $('crew-name-header').style.display = 'none';
@@ -93,41 +88,119 @@ $('btn-edit-crew-name')?.addEventListener('click', () => {
 $('btn-save-crew-name')?.addEventListener('click', async () => {
   const input = $('crew-name-input');
   const name  = input?.value.trim();
-  if (!name) return;
+  if (!name || !state.crew) return;
 
-  await saveCrewName(state.user.uid, name);
-  if (state.userProfile) state.userProfile.crew_name = name;
-  renderCrewName();
-
+  await saveCrewName(state.crew.id, name);
   $('crew-name-edit-row').style.display = 'none';
   $('crew-name-header').style.display = '';
+  // name wird via onCrewChange-Listener aktualisiert
 });
 
 $('crew-name-input')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') $('btn-save-crew-name')?.click();
+  if (e.key === 'Enter')  $('btn-save-crew-name')?.click();
   if (e.key === 'Escape') {
     $('crew-name-edit-row').style.display = 'none';
     $('crew-name-header').style.display = '';
   }
 });
 
-// ── Persistenter Invite-Code ──
+// ── Crew erstellen ──
 
-async function loadPersistentCode() {
-  const codeEl = $('invite-code-text');
-  if (!codeEl) return;
+$('btn-create-crew')?.addEventListener('click', async () => {
+  const input = $('crew-create-name-input');
+  const name  = input?.value.trim();
+  if (!name) { setFeedback('Bitte einen Crew-Namen eingeben.', 'error'); return; }
+
+  const btn = $('btn-create-crew');
+  btn.disabled    = true;
+  btn.textContent = 'Erstelle...';
+
   try {
-    const code = await getOrCreatePersistentCode(state.user.uid);
-    codeEl.textContent = code;
+    await createCrew(state.user.uid, name, state.activeFestivalId);
+    if (input) input.value = '';
+    setFeedback('', '');
   } catch (err) {
-    console.error('[crew] Konnte Code nicht laden:', err);
-    codeEl.textContent = '— Fehler —';
+    setFeedback(
+      err.message === 'ALREADY_IN_CREW'
+        ? 'Du bist bereits in einer Crew für dieses Festival.'
+        : 'Fehler — bitte nochmal versuchen.',
+      'error'
+    );
   }
+
+  btn.disabled    = false;
+  btn.textContent = 'Crew erstellen';
+});
+
+$('crew-create-name-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-create-crew')?.click();
+});
+
+// ── Crew beitreten ──
+
+$('btn-accept-code')?.addEventListener('click', async () => {
+  const input = $('invite-input');
+  const code  = input?.value?.trim();
+
+  if (!code) { setFeedback('Bitte einen Code eingeben.', 'error'); return; }
+
+  const btn = $('btn-accept-code');
+  btn.disabled    = true;
+  btn.textContent = 'Verbinde...';
+
+  try {
+    await joinCrewByCode(code, state.user.uid, state.activeFestivalId);
+    if (input) input.value = '';
+    setFeedback('', '');
+  } catch (err) {
+    const messages = {
+      CODE_NOT_FOUND:  'Code nicht gefunden. Bitte prüfen.',
+      CODE_OWN:        'Du kannst nicht deiner eigenen Crew beitreten.',
+      ALREADY_MEMBER:  'Du bist bereits in dieser Crew.',
+      ALREADY_IN_CREW: 'Du bist bereits in einer Crew für dieses Festival. Verlasse erst deine aktuelle Crew.'
+    };
+    setFeedback(messages[err.message] || 'Fehler — bitte nochmal versuchen.', 'error');
+  }
+
+  btn.disabled    = false;
+  btn.textContent = 'Beitreten';
+});
+
+$('invite-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-accept-code')?.click();
+});
+
+function setFeedback(msg, type) {
+  const el = $('invite-feedback');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'error' ? 'var(--danger)' : 'var(--success)';
 }
 
+// ── Crew verlassen ──
+
+$('btn-leave-crew')?.addEventListener('click', async () => {
+  if (!state.crew) return;
+  if (!confirm(`Crew "${state.crew.name}" wirklich verlassen?`)) return;
+
+  const btn = $('btn-leave-crew');
+  btn.disabled    = true;
+  btn.textContent = 'Verlasse...';
+
+  try {
+    await leaveCrew(state.crew.id, state.user.uid);
+  } catch (err) {
+    console.error('[crew] leaveCrew Fehler:', err);
+    btn.disabled    = false;
+    btn.textContent = 'Crew verlassen';
+  }
+});
+
+// ── Code kopieren ──
+
 $('btn-copy-code')?.addEventListener('click', () => {
-  const code = $('invite-code-text')?.textContent?.trim();
-  if (!code || code === 'Lade...' || code === '— Fehler —') return;
+  const code = state.crew?.code;
+  if (!code) return;
   navigator.clipboard.writeText(code).then(() => {
     const btn = $('btn-copy-code');
     btn.textContent = 'Kopiert ✓';
@@ -139,48 +212,31 @@ $('btn-copy-code')?.addEventListener('click', () => {
   });
 });
 
-// ── Code annehmen ──
+// ── Code neu generieren (nur Admin) ──
 
-$('btn-accept-code')?.addEventListener('click', async () => {
-  const input    = $('invite-input');
-  const code     = input?.value?.trim();
+$('btn-regen-code')?.addEventListener('click', async () => {
+  if (!state.crew || !isAdmin()) return;
+  if (!confirm('Neuen Code generieren? Der alte Code funktioniert dann nicht mehr.')) return;
 
-  if (!code) { setFeedback('Bitte einen Code eingeben.', 'error'); return; }
-
-  const btn = $('btn-accept-code');
+  const btn = $('btn-regen-code');
   btn.disabled = true;
-  btn.textContent = 'Verbinde...';
 
   try {
-    await acceptInviteCode(code, state.user.uid);
-    if (input) input.value = '';
-    setFeedback('Verbunden! Willkommen in der Crew 🎉', 'success');
+    await regenerateCrewCode(state.crew.id);
+    // Code wird via onCrewChange-Listener aktualisiert
   } catch (err) {
-    const messages = {
-      CODE_NOT_FOUND:    'Code nicht gefunden. Bitte prüfen.',
-      CODE_USED:         'Dieser Code wurde bereits verwendet.',
-      CODE_OWN:          'Du kannst deinen eigenen Code nicht einlösen.',
-      ALREADY_CONNECTED: 'Ihr seid bereits verbunden.'
-    };
-    setFeedback(messages[err.message] || 'Fehler — bitte nochmal versuchen.', 'error');
+    console.error('[crew] regenerateCrewCode Fehler:', err);
   }
 
   btn.disabled = false;
-  btn.textContent = 'Verbinden';
 });
-
-function setFeedback(msg, type) {
-  const el = $('invite-feedback');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = type === 'error' ? 'var(--danger)' : 'var(--success)';
-}
 
 // ── Firestore Listener ──
 
 function startListeners() {
-  const u1 = onCrewChange(state.user.uid, connections => {
-    state.crewConnections = connections;
+  const u1 = onCrewChange(state.user.uid, state.activeFestivalId, crew => {
+    state.crew         = crew;
+    state.filterMember = null;
     render();
   });
 
@@ -205,10 +261,29 @@ function startListeners() {
 // ── Render ──
 
 function render() {
-  renderCrewMembers();
-  renderMemberFilterBanner();
-  renderSharedFavorites();
-  renderCrewArtistList();
+  if (state.crew) {
+    $('no-crew-section').style.display  = 'none';
+    $('in-crew-section').style.display  = '';
+    renderCrewHeader();
+    renderCrewMembers();
+    renderMemberFilterBanner();
+    renderSharedFavorites();
+    renderCrewArtistList();
+  } else {
+    $('no-crew-section').style.display  = '';
+    $('in-crew-section').style.display  = 'none';
+  }
+}
+
+function renderCrewHeader() {
+  const nameEl = $('crew-name-display');
+  if (nameEl) nameEl.textContent = state.crew?.name || 'Meine Crew';
+
+  const codeEl = $('invite-code-text');
+  if (codeEl) codeEl.textContent = state.crew?.code || '—';
+
+  const regenBtn = $('btn-regen-code');
+  if (regenBtn) regenBtn.style.display = isAdmin() ? '' : 'none';
 }
 
 function renderCrewMembers() {
@@ -226,42 +301,31 @@ function renderCrewMembers() {
     const isSelf     = u.uid === state.user?.uid;
     const isFiltered = state.filterMember === u.uid;
     const ini        = getInitials(u.display_name);
-    const codeHtml   = u.invite_code
-      ? `<div class="crew-member-code">
-           <span class="crew-member-code-text">${esc(u.invite_code)}</span>
-           <button class="btn-copy-mini" data-code="${esc(u.invite_code)}" title="Code kopieren">⧉</button>
-         </div>`
-      : '';
+    const isCrewAdmin = state.crew?.created_by === u.uid;
+
     return `
       <div class="crew-member-card ${isSelf ? 'self' : 'clickable'} ${isFiltered ? 'filtered' : ''}"
            data-uid="${esc(u.uid)}">
         ${u.photo_url
           ? `<img class="crew-member-avatar" src="${esc(u.photo_url)}" alt="">`
           : `<div class="crew-member-avatar initials">${esc(ini)}</div>`}
-        <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}${isSelf ? ' (Du)' : ''}</div>
+        <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}${isSelf ? ' (Du)' : ''}${isCrewAdmin ? ' ★' : ''}</div>
         <div class="crew-member-stats">${prog.rated}/${prog.total} bewertet</div>
         <div class="crew-member-stats">${prog.heard} reingehört</div>
-        ${codeHtml}
       </div>`;
   }).join('');
 
   el.querySelectorAll('.crew-member-card.clickable').forEach(card => {
-    card.addEventListener('click', e => {
-      if (e.target.classList.contains('btn-copy-mini')) return;
-      const uid = card.dataset.uid;
-      state.filterMember = state.filterMember === uid ? null : uid;
+    card.addEventListener('click', () => {
+      const uid       = card.dataset.uid;
+      const setting   = state.filterMember !== uid;
+      state.filterMember = setting ? uid : null;
       render();
-    });
-  });
-
-  el.querySelectorAll('.btn-copy-mini').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      navigator.clipboard.writeText(btn.dataset.code).then(() => {
-        const prev = btn.textContent;
-        btn.textContent = '✓';
-        setTimeout(() => { btn.textContent = prev; }, 2000);
-      });
+      if (setting) {
+        setTimeout(() => {
+          $('crew-list-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      }
     });
   });
 }
@@ -324,9 +388,9 @@ function renderCrewArtistList() {
     return;
   }
 
-  const filtered    = crewRatings();
+  const filtered     = crewRatings();
   const memberFilter = state.filterMember;
-  const crewVisible = memberFilter
+  const crewVisible  = memberFilter
     ? [state.users.find(u => u.uid === memberFilter)].filter(Boolean)
     : [
         state.users.find(u => u.uid === state.user?.uid),

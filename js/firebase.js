@@ -201,37 +201,10 @@ export async function saveOfflineAuthHash(uid, hash) {
   await updateDoc(doc(db, 'users', uid), { offline_auth_hash: hash });
 }
 
-export async function saveCrewName(uid, name) {
-  await updateDoc(doc(db, 'users', uid), { crew_name: name.trim() });
-}
-
 export async function saveActiveFestival(uid, festivalId) {
   await updateDoc(doc(db, 'users', uid), { active_festival_id: festivalId });
 }
 
-// Gibt den persistenten Einladungs-Code des Users zurück (erstellt ihn wenn nötig).
-// Dieser Code bleibt dauerhaft gültig und kann beliebig oft weitergegeben werden.
-export async function getOrCreatePersistentCode(uid) {
-  const userRef  = doc(db, 'users', uid);
-  const userSnap = await getDoc(userRef);
-  const userData = userSnap.data();
-
-  if (userData?.invite_code) {
-    // Sicherstellen dass das crew_invites-Dokument noch vorhanden ist
-    const inviteSnap = await getDoc(doc(db, 'crew_invites', userData.invite_code));
-    if (inviteSnap.exists()) return userData.invite_code;
-  }
-
-  const code = generateCode();
-  await setDoc(doc(db, 'crew_invites', code), {
-    creator_uid: uid,
-    created_at:  serverTimestamp(),
-    used:        false,
-    persistent:  true
-  });
-  await updateDoc(userRef, { invite_code: code });
-  return code;
-}
 
 // ── Crew ──
 
@@ -242,47 +215,79 @@ function generateCode() {
   return code;
 }
 
-export async function createInviteCode(uid) {
+async function getExistingCrew(uid, festivalId) {
+  const q    = query(collection(db, 'crews'), where('members', 'array-contains', uid));
+  const snap = await getDocs(q);
+  const match = snap.docs.find(d => d.data().festival_id === festivalId);
+  return match ? { id: match.id, ...match.data() } : null;
+}
+
+export async function createCrew(uid, name, festivalId) {
+  if (await getExistingCrew(uid, festivalId)) throw new Error('ALREADY_IN_CREW');
   const code = generateCode();
-  await setDoc(doc(db, 'crew_invites', code), {
-    creator_uid: uid,
-    created_at:  serverTimestamp(),
-    used:        false
+  const ref  = doc(collection(db, 'crews'));
+  await setDoc(ref, {
+    name:        name.trim(),
+    code,
+    members:     [uid],
+    created_by:  uid,
+    festival_id: festivalId,
+    created_at:  serverTimestamp()
   });
+  return { id: ref.id, code };
+}
+
+export async function joinCrewByCode(code, uid, festivalId) {
+  if (await getExistingCrew(uid, festivalId)) throw new Error('ALREADY_IN_CREW');
+  const normalized = code.trim().toUpperCase();
+  const q    = query(collection(db, 'crews'),
+    where('code',        '==', normalized),
+    where('festival_id', '==', festivalId)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error('CODE_NOT_FOUND');
+  const crewDoc = snap.docs[0];
+  const crew    = crewDoc.data();
+  if (crew.created_by === uid)      throw new Error('CODE_OWN');
+  if (crew.members.includes(uid))   throw new Error('ALREADY_MEMBER');
+  await updateDoc(crewDoc.ref, { members: [...crew.members, uid] });
+  return crewDoc.id;
+}
+
+export async function leaveCrew(crewId, uid) {
+  const ref  = doc(db, 'crews', crewId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const crew       = snap.data();
+  const newMembers = crew.members.filter(m => m !== uid);
+  if (newMembers.length === 0) {
+    await deleteDoc(ref);
+  } else {
+    const update = { members: newMembers };
+    if (crew.created_by === uid) update.created_by = newMembers[0];
+    await updateDoc(ref, update);
+  }
+}
+
+export async function regenerateCrewCode(crewId) {
+  const code = generateCode();
+  await updateDoc(doc(db, 'crews', crewId), { code });
   return code;
 }
 
-export async function acceptInviteCode(code, uid) {
-  const normalized = code.trim().toUpperCase();
-  const inviteRef  = doc(db, 'crew_invites', normalized);
-  const snap       = await getDoc(inviteRef);
-
-  if (!snap.exists())             throw new Error('CODE_NOT_FOUND');
-  const invite = snap.data();
-  if (invite.creator_uid === uid) throw new Error('CODE_OWN');
-  if (!invite.persistent && invite.used) throw new Error('CODE_USED');
-
-  // Bereits verbunden?
-  const q        = query(collection(db, 'crew_connections'), where('members', 'array-contains', uid));
-  const existing = await getDocs(q);
-  if (existing.docs.some(d => d.data().members.includes(invite.creator_uid))) {
-    throw new Error('ALREADY_CONNECTED');
-  }
-
-  await setDoc(doc(collection(db, 'crew_connections')), {
-    members:    [invite.creator_uid, uid],
-    created_at: serverTimestamp()
-  });
-  // Persistente Codes bleiben aktiv — Einmal-Codes werden als verwendet markiert
-  if (!invite.persistent) await updateDoc(inviteRef, { used: true });
-  return invite.creator_uid;
+export async function saveCrewName(crewId, name) {
+  await updateDoc(doc(db, 'crews', crewId), { name: name.trim() });
 }
 
-export function onCrewChange(uid, callback) {
-  const q = query(collection(db, 'crew_connections'), where('members', 'array-contains', uid));
+export function onCrewChange(uid, festivalId, callback) {
+  const q = query(collection(db, 'crews'), where('members', 'array-contains', uid));
   return onSnapshot(q,
-    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-    err  => console.error('[firebase] onCrewChange Fehler:', err.code, err.message)
+    snap => {
+      const all  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const crew = all.find(c => c.festival_id === festivalId) || null;
+      callback(crew);
+    },
+    err => console.error('[firebase] onCrewChange Fehler:', err.code, err.message)
   );
 }
 
