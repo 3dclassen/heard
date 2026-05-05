@@ -108,6 +108,43 @@ let state = {
   unsubscribers:    []
 };
 
+// ── Filter-State Persistenz ──
+
+const FILTER_STORAGE_KEY = 'heard_filter_state';
+
+function saveFilterState() {
+  localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+    filterStage:  state.filterStage,
+    filterStatus: state.filterStatus,
+    searchQuery:  state.searchQuery,
+    sortBy:       state.sortBy,
+  }));
+}
+
+function loadFilterState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || 'null');
+    if (saved) {
+      if (saved.filterStage)  state.filterStage  = saved.filterStage;
+      if (saved.filterStatus) state.filterStatus = saved.filterStatus;
+      if (saved.searchQuery)  state.searchQuery  = saved.searchQuery;
+      if (saved.sortBy)       state.sortBy       = saved.sortBy;
+    }
+  } catch {}
+}
+
+function syncFilterUI() {
+  if (searchInput) searchInput.value = state.searchQuery;
+  document.querySelectorAll('[data-status]').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === state.filterStatus);
+  });
+  document.querySelectorAll('[data-sort]').forEach(b => {
+    b.classList.toggle('active', b.dataset.sort === state.sortBy);
+  });
+}
+
+loadFilterState();
+
 // ── DOM-Refs ──
 
 const $ = id => document.getElementById(id);
@@ -222,6 +259,7 @@ function showApp() {
   document.title = `HEARD ${APP_VERSION} — Artists`;
   const versionEl = $('app-version');
   if (versionEl) versionEl.textContent = APP_VERSION;
+  syncFilterUI();
 }
 
 // ── Offline Login ──
@@ -440,6 +478,7 @@ async function syncOfflineRatings() {
 
 searchInput?.addEventListener('input', e => {
   state.searchQuery = e.target.value.toLowerCase();
+  saveFilterState();
   render();
 });
 
@@ -461,6 +500,7 @@ function renderStagePills() {
       state.filterStage = btn.dataset.stage;
       container.querySelectorAll('[data-stage]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      saveFilterState();
       render();
     });
     if (btn.dataset.stage === state.filterStage) btn.classList.add('active');
@@ -472,8 +512,15 @@ document.querySelectorAll('[data-status]').forEach(btn => {
     state.filterStatus = btn.dataset.status;
     document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    saveFilterState();
     render();
   });
+});
+
+document.querySelector('.nav-logo')?.addEventListener('click', e => {
+  e.preventDefault();
+  closePanel();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 function updateNavFestival() {
@@ -491,8 +538,11 @@ async function switchFestival(festivalId) {
   state.activeFestivalId = festivalId;
   state.filterStage  = 'all';
   state.filterStatus = 'all';
+  state.searchQuery  = '';
+  state.sortBy       = 'name-asc';
   state.artists      = [];
   state.ratings      = [];
+  saveFilterState();
   await saveActiveFestival(state.user.uid, festivalId);
   startListeners();
   render();
@@ -628,6 +678,7 @@ document.querySelectorAll('[data-sort]').forEach(btn => {
     state.sortBy = btn.dataset.sort;
     document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    saveFilterState();
     render();
   });
 });

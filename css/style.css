@@ -355,7 +355,7 @@ input, textarea {
   border-radius: var(--tile-border-radius);
   padding: 0.875rem 1rem;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto 1fr;
   gap: 0.25rem 1rem;
   cursor: pointer;
@@ -455,9 +455,8 @@ input, textarea {
   grid-column: 1;
   font-size: var(--font-size-sm);
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: break-word;
   min-width: 0;
   align-self: end;
   padding-bottom: 0.125rem;

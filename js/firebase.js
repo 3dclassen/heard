@@ -205,6 +205,10 @@ export async function saveActiveFestival(uid, festivalId) {
   await updateDoc(doc(db, 'users', uid), { active_festival_id: festivalId });
 }
 
+export async function saveActiveCrew(uid, crewId) {
+  await updateDoc(doc(db, 'users', uid), { active_crew_id: crewId });
+}
+
 
 // ── Crew ──
 
@@ -234,6 +238,7 @@ export async function createCrew(uid, name, festivalId) {
     festival_id: festivalId,
     created_at:  serverTimestamp()
   });
+  await saveActiveCrew(uid, ref.id);
   return { id: ref.id, code };
 }
 
@@ -251,6 +256,7 @@ export async function joinCrewByCode(code, uid, festivalId) {
   if (crew.created_by === uid)      throw new Error('CODE_OWN');
   if (crew.members.includes(uid))   throw new Error('ALREADY_MEMBER');
   await updateDoc(crewDoc.ref, { members: [...crew.members, uid] });
+  await saveActiveCrew(uid, crewDoc.id);
   return crewDoc.id;
 }
 
@@ -267,6 +273,7 @@ export async function leaveCrew(crewId, uid) {
     if (crew.created_by === uid) update.created_by = newMembers[0];
     await updateDoc(ref, update);
   }
+  await saveActiveCrew(uid, null);
 }
 
 export async function regenerateCrewCode(crewId) {
