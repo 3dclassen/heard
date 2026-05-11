@@ -3,10 +3,10 @@
 import {
   auth, onAuthChange, ensureUserProfile, logout,
   onArtistsChange, onRatingsChange, onUsersChange,
-  createCrew, joinCrewByCode, leaveCrew, regenerateCrewCode,
+  createCrew, joinCrewByCode, leaveCrew,
   onCrewChange, saveCrewName,
   onFestivalsChange, saveActiveFestival,
-  onAllCrewsChange
+  onAllCrewsChange, getOrCreateMyInviteCode
 } from './firebase.js';
 import { isOnline } from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
@@ -15,7 +15,8 @@ import { hasOfflineHash } from './offline-auth.js';
 let state = {
   user:             null,
   userProfile:      null,
-  crew:             null,   // aktive Crew für dieses Festival
+  crew:             null,
+  myInviteCode:     null,
   users:            [],
   artists:          [],
   ratings:          [],
@@ -51,7 +52,8 @@ function crewRatings() {
 }
 
 function isAdmin() {
-  return state.crew?.created_by === state.user?.uid;
+  if (!state.crew?.created_by) return true; // Altdaten ohne created_by: alle dürfen bearbeiten
+  return state.crew.created_by === state.user?.uid;
 }
 
 // ── Auth ──
@@ -62,6 +64,7 @@ onAuthChange(async user => {
 
   state.userProfile = await ensureUserProfile(user);
   state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
+  state.myInviteCode = await getOrCreateMyInviteCode(user.uid);
   setupNav();
   startListeners();
 });
@@ -121,7 +124,7 @@ $('btn-create-crew')?.addEventListener('click', async () => {
   btn.textContent = 'Erstelle...';
 
   try {
-    await createCrew(state.user.uid, name, state.activeFestivalId);
+    await createCrew(state.user.uid, name);
     if (input) input.value = '';
     setFeedback('', '');
   } catch (err) {
@@ -154,15 +157,16 @@ $('btn-accept-code')?.addEventListener('click', async () => {
   btn.textContent = 'Verbinde...';
 
   try {
-    await joinCrewByCode(code, state.user.uid, state.activeFestivalId);
+    await joinCrewByCode(code, state.user.uid);
     if (input) input.value = '';
     setFeedback('', '');
   } catch (err) {
     const messages = {
       CODE_NOT_FOUND:  'Code nicht gefunden. Bitte prüfen.',
-      CODE_OWN:        'Du kannst nicht deiner eigenen Crew beitreten.',
+      CODE_OWN:        'Das ist dein eigener Code — schick ihn an andere.',
+      CODE_USED:       'Dieser Code wurde bereits verwendet.',
       ALREADY_MEMBER:  'Du bist bereits in dieser Crew.',
-      ALREADY_IN_CREW: 'Du bist bereits in einer Crew für dieses Festival. Verlasse erst deine aktuelle Crew.'
+      ALREADY_IN_CREW: 'Du bist bereits in einer Crew. Verlasse erst deine aktuelle Crew.'
     };
     setFeedback(messages[err.message] || 'Fehler — bitte nochmal versuchen.', 'error');
   }
@@ -204,7 +208,7 @@ $('btn-leave-crew')?.addEventListener('click', async () => {
 // ── Code kopieren ──
 
 $('btn-copy-code')?.addEventListener('click', () => {
-  const code = state.crew?.code;
+  const code = state.myInviteCode;
   if (!code) return;
   navigator.clipboard.writeText(code).then(() => {
     const btn = $('btn-copy-code');
@@ -239,7 +243,7 @@ $('btn-regen-code')?.addEventListener('click', async () => {
 // ── Firestore Listener ──
 
 function startListeners() {
-  const u1 = onCrewChange(state.user.uid, state.activeFestivalId, crew => {
+  const u1 = onCrewChange(state.user.uid, crew => {
     state.crew         = crew;
     state.filterMember = null;
     render();
@@ -265,7 +269,7 @@ function startListeners() {
     updateNavFestival();
   });
 
-  const u6 = onAllCrewsChange(state.activeFestivalId, allCrews => {
+  const u6 = onAllCrewsChange(allCrews => {
     state.allCrews = allCrews;
     render();
   });
@@ -296,10 +300,10 @@ function renderCrewHeader() {
   if (nameEl) nameEl.textContent = state.crew?.name || 'Meine Crew';
 
   const codeEl = $('invite-code-text');
-  if (codeEl) codeEl.textContent = state.crew?.code || '—';
+  if (codeEl) codeEl.textContent = state.myInviteCode || '…';
 
   const regenBtn = $('btn-regen-code');
-  if (regenBtn) regenBtn.style.display = isAdmin() ? '' : 'none';
+  if (regenBtn) regenBtn.style.display = 'none';
 
   const ctxEl = $('crew-festival-context');
   if (ctxEl) {
