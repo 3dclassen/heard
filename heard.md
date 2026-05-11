@@ -1,5 +1,5 @@
 HEARD — Product Requirements Document
-Version: 0.13 Stand: April 2026 Autor: Daniel Classen Status: Prototyp live (v0.13) — Sprint 6d fertig (Fixes + MOYN Import)
+Version: 0.15 Stand: Mai 2026 Autor: Daniel Classen Status: Prototyp live (v0.15) — Sprint 8 fertig (Crew-System, Ähnlichkeitsscore, Mobile-Fix)
 
 Dieses Dokument ist das zentrale Pflichtenheft für HEARD. Es wird bei jeder Session in VS Code als Kontext mitgegeben, damit Claude den aktuellen Stand kennt und korrekte Entscheidungen trifft.
 
@@ -14,17 +14,17 @@ Kern-Versprechen: Nie wieder Artists verpassen weil du nicht weisst wer gut ist.
 Aktive Festivals im Prototyp:
 
 MODEM Festival 2026 (Kroatien, Juli 2026)
-  Stages: The Hive, The Swamp, The Seed
-  Line-Up: https://modemfestival.com/the-hive/ | /the-swamp/ | /the-seed/
-  Artists + SoundCloud-Links via Scraper in Firebase. Timetable folgt Juli 2026.
+Stages: The Hive, The Swamp, The Seed
+Line-Up: https://modemfestival.com/the-hive/ | /the-swamp/ | /the-seed/
+Artists + SoundCloud-Links via Scraper in Firebase. Timetable folgt Juli 2026.
 
 MOYN Festival 2026 (Deutschland)
-  Line-Up: https://moynfestival.de/line-up/
-  83 Artists via Scraper importiert (scraper/scrape-moyn.js). Stages werden
-  nachgetragen sobald MOYN sie veröffentlicht (Batch-Update-Script, Ratings bleiben erhalten).
+Line-Up: https://moynfestival.de/line-up/
+83 Artists via Scraper importiert (scraper/scrape-moyn.js). Stages werden
+nachgetragen sobald MOYN sie veröffentlicht (Batch-Update-Script, Ratings bleiben erhalten).
 
 3. Zielgruppe
-   Prototyp: Daniel + 3 Festivalbegleiter*innen (4 User)
+   Prototyp: Daniel + 3 Festivalbegleiter\*innen (4 User)
    v1: Beliebig viele Nutzer\*innen, mehrere Festivals
    Technisches Niveau: Normale Smartphone-Nutzung, kein technisches Wissen erforderlich
 
@@ -229,7 +229,7 @@ offline_auth_hash
 string
 ⚡ SHA-256 Hash der Passphrase (neu, Sprint 5)
 
-7.5 crews/{crewId}
+7.5 crew_connections/{connId}
 Feld
 Typ
 Beschreibung
@@ -238,93 +238,94 @@ string
 Auto (Firebase)
 name
 string
-Crew-Name (z.B. "Die Hive-Fraktion")
-code
-string
-Wiederverwendbarer 6-stelliger Code
+Crew-Name (z.B. "DJ Team") — optional, wenn noch nicht benannt
 members
 array
 Liste aller UIDs
 created_by
 string
-UID des Erstellers (= Admin)
-festival_id
-string
-Referenz auf Festival
+UID des Erstellers (optional, fehlt in Altdaten → alle Mitglieder gelten als Admin)
 created_at
 timestamp
 Auto
 
-Hinweis: Pro Festival ist ein User in max. einer Crew. crew_connections und crew_invites sind deprecated (Altdaten, werden nicht mehr gelesen).
+Hinweis: Crew-Mitgliedschaft ist festival-agnostisch. Der Ähnlichkeitsscore wird festival-spezifisch über die Ratings berechnet.
+
+7.6 crew_invites/{CODE}
+Feld
+Typ
+Beschreibung
+CODE (Doc-ID)
+string
+6-stelliger alphanumerischer Code (z.B. JGDHXD) = Document-ID
+creator_uid
+string
+UID des Einladenden
+persistent
+boolean
+true = Code bleibt gültig, kann mehrfach verwendet werden
+used
+boolean
+true = einmalig verwendet (nur relevant wenn persistent: false)
+created_at
+timestamp
+Auto
+
+Hinweis: Jeder User hat einen persistenten Invite-Code (persistent: true), der beim ersten Laden von crew.html automatisch erstellt wird falls keiner existiert. Einmalige Codes (persistent: false, used: true) sind abgelaufen und können nicht mehr genutzt werden.
+
+DEPRECATED: crews/{crewId}
+Die crews-Collection wurde in Sprint 6c angelegt aber nie mit echten Daten befüllt. Das tatsächliche Datenmodell war immer crew_connections + crew_invites. Seit Sprint 8 liest/schreibt der Code korrekt in diese Collections. Die crews-Collection kann ignoriert/gelöscht werden.
 
 8. Firebase Security Rules
    rules_version = '2';
 
 service cloud.firestore {
 
-match /databases/{database}/documents {
+  match /databases/{database}/documents {
 
     match /festivals/{festivalId} {
-
       allow read: if request.auth != null;
-
       allow write: if request.auth != null &&
-
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
     }
 
     match /artists/{artistId} {
-
       allow read: if request.auth != null;
-
       allow write: if request.auth != null &&
-
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
     }
 
     match /ratings/{ratingId} {
-
       allow read: if request.auth != null;
-
       allow write: if request.auth != null &&
-
         request.resource.data.user_id == request.auth.uid;
-
     }
 
     match /users/{userId} {
-
       allow read: if request.auth != null;
-
       allow write: if request.auth != null && request.auth.uid == userId;
-
     }
 
-    match /crews/{crewId} {
-
-      allow read: if request.auth != null &&
-
-        request.auth.uid in resource.data.members;
-
+    match /crew_connections/{connId} {
+      allow read: if request.auth != null;
       allow create: if request.auth != null &&
-
-        request.auth.uid in request.resource.data.members &&
-
-        request.resource.data.created_by == request.auth.uid;
-
+        request.auth.uid in request.resource.data.members;
       allow update: if request.auth != null &&
-
         request.auth.uid in resource.data.members;
-
       allow delete: if request.auth != null &&
-
         request.auth.uid in resource.data.members;
-
     }
 
-}
+    match /crew_invites/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.creator_uid == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null &&
+        resource.data.creator_uid == request.auth.uid;
+    }
+
+  }
 
 }
 
@@ -395,7 +396,7 @@ Profil-Modal:
 - Offline-Login erfolgreich: Terminator / Knight Rider / Dirty Dancing
 - Passphrase-Setup: ALF / MacGyver / Al Bundy
 - Empty State ohne Daten: Colt Sievers
-✅ Sprint 6a — Crew-Fixes + Auto-Refresh (FERTIG, v0.10)
+  ✅ Sprint 6a — Crew-Fixes + Auto-Refresh (FERTIG, v0.10)
   - Crew-Ansicht: Sterne-über-Tiles-Bug behoben (display:flex-Fix)
   - Crew-Ansicht: Kommentare jetzt sichtbar in der Artist-Liste
   - Auto-Refresh: onSnapshot-Listener für Ratings + Users triggern jetzt render() — Änderungen von Crew-Mitgliedern sofort sichtbar
@@ -403,77 +404,129 @@ Profil-Modal:
   - Klickbare Crew-Kachel: Kachel eines Mitglieds anklicken → gefilterte Ansicht nur seiner Bewertungen. Lila Banner zeigt aktiven Filter. ✕ zum Zurücksetzen.
 
 ✅ Sprint 6b — Mehrere Festivals + Festival-Switcher (FERTIG, v0.11)
-  Festival-Switcher:
-  - active_festival_id im User-Profil (Firebase)
-  - Profil-Menü zeigt aktives Festival (Name + Ort) mit "Wechseln"-Button
-  - Festival-Panel: Liste aller Festivals, aktives markiert mit ✓
-  - Wechseln → alle Listener stoppen, neues Festival aktiv, Artists + Ratings neu laden
-  - Nav-Pill zeigt aktiven Festival-Namen, klickbar → öffnet Festival-Switcher
+Festival-Switcher:
 
-  Neues Festival anlegen:
-  - 8 Vorlagen: MODEM, Gondwana, Ozora, Fusion, Bucht der Träumer, Drops, Master of Puppets, MOYN + "Manuell"
-  - Vorlage wählen → Name + Ort auto-befüllt, Stages gesetzt
-  - Anlegen → Firebase-Dokument erstellt, sofort aktiv
+- active_festival_id im User-Profil (Firebase)
+- Profil-Menü zeigt aktives Festival (Name + Ort) mit "Wechseln"-Button
+- Festival-Panel: Liste aller Festivals, aktives markiert mit ✓
+- Wechseln → alle Listener stoppen, neues Festival aktiv, Artists + Ratings neu laden
+- Nav-Pill zeigt aktiven Festival-Namen, klickbar → öffnet Festival-Switcher
 
-  Dynamische Stage-Filter:
-  - Stage-Pills aus Festival.stages geladen (nicht mehr hardcoded)
-  - MODEM: weiterhin "The Hive / The Swamp / The Seed"
-  - Andere Festivals: deren Stage-Namen
+Neues Festival anlegen:
 
-  Alle Seiten (index, crew, timetable): lesen active_festival_id aus User-Profil
+- 8 Vorlagen: MODEM, Gondwana, Ozora, Fusion, Bucht der Träumer, Drops, Master of Puppets, MOYN + "Manuell"
+- Vorlage wählen → Name + Ort auto-befüllt, Stages gesetzt
+- Anlegen → Firebase-Dokument erstellt, sofort aktiv
 
-  "Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
+Dynamische Stage-Filter:
+
+- Stage-Pills aus Festival.stages geladen (nicht mehr hardcoded)
+- MODEM: weiterhin "The Hive / The Swamp / The Seed"
+- Andere Festivals: deren Stage-Namen
+
+Alle Seiten (index, crew, timetable): lesen active_festival_id aus User-Profil
+
+"Gesehen"-Checkbox: ✅ bereits in Sprint 4 umgesetzt
 ✅ Sprint 6c — Crew-Modell Migration (FERTIG, v0.12)
-  Neues Datenmodell crews/{crewId}:
-  - Eine Crew = ein persistenter Code für alle Members
-  - Crew-Name auf der Crew, nicht pro User
-  - Admin = Ersteller (kann Code neu generieren)
-  - Crew verlassen: Members-Array aktualisiert, leere Crew wird gelöscht, Admin-Transfer bei Verlassen
-  - Pro Festival: max. eine Crew pro User (Schutz in joinCrewByCode + createCrew)
+Neues Datenmodell crews/{crewId}:
 
-  UI-States:
-  - Noch keine Crew: "Crew erstellen" (Name eingeben) ODER "Beitreten" (Code eingeben)
-  - In einer Crew: Name, Members, Code (Kopieren + Neu generieren für Admin), Crew verlassen
-  - Crew-Admin erkennbar am ★ auf der Mitglieder-Kachel
+- Eine Crew = ein persistenter Code für alle Members
+- Crew-Name auf der Crew, nicht pro User
+- Admin = Ersteller (kann Code neu generieren)
+- Crew verlassen: Members-Array aktualisiert, leere Crew wird gelöscht, Admin-Transfer bei Verlassen
+- Pro Festival: max. eine Crew pro User (Schutz in joinCrewByCode + createCrew)
 
-  Deprecated (nicht gelöscht, werden aber nicht mehr gelesen):
-  - crew_connections Collection
-  - crew_invites Collection
-  - users.invite_code Feld
-  - users.crew_name Feld
+UI-States:
+
+- Noch keine Crew: "Crew erstellen" (Name eingeben) ODER "Beitreten" (Code eingeben)
+- In einer Crew: Name, Members, Code (Kopieren + Neu generieren für Admin), Crew verlassen
+- Crew-Admin erkennbar am ★ auf der Mitglieder-Kachel
+
+Deprecated (nicht gelöscht, werden aber nicht mehr gelesen):
+
+- crew_connections Collection
+- crew_invites Collection
+- users.invite_code Feld
+- users.crew_name Feld
 
 ✅ Sprint 6d — Fixes + MOYN Import (FERTIG, v0.13)
-  Navigation & Responsive:
-  - Logo "HEARD" → "HD" auf Screens < 480px (CSS: .nav-logo-ear wird versteckt)
-  - Logo ist jetzt Link auf index.html (alle Seiten)
-  - Nav-Links kompakter auf Mobile (kleinere Padding + Schrift)
-  - Festival-Pill auf 72px begrenzt auf Mobile
-  - Profile-Email: word-break fix (kein Overflow mehr im Profil-Panel)
-  - Invite-Code-Display: flex-wrap auf kleinen Screens (Code + Buttons umbrechen)
-  - Bekanntes Restproblem: Nav auf sehr kleinen Screens (< 360px) noch leicht zu breit
-    → Lösung: Icons oder Burger-Menü (niedrige Prio, nach MODEM)
+Navigation & Responsive:
 
-  Crew Member Filter UX:
-  - Klick auf Crew-Mitglied → automatischer Smooth-Scroll zur Bewertungsliste
-  - Vorher: Filter war aktiv aber nicht sichtbar (man musste selbst scrollen)
+- Logo "HEARD" → "HD" auf Screens < 480px (CSS: .nav-logo-ear wird versteckt)
+- Logo ist jetzt Link auf index.html (alle Seiten)
+- Nav-Links kompakter auf Mobile (kleinere Padding + Schrift)
+- Festival-Pill auf 72px begrenzt auf Mobile
+- Profile-Email: word-break fix (kein Overflow mehr im Profil-Panel)
+- Invite-Code-Display: flex-wrap auf kleinen Screens (Code + Buttons umbrechen)
+- Bekanntes Restproblem: Nav auf sehr kleinen Screens (< 360px) noch leicht zu breit
+  → Lösung: Icons oder Burger-Menü (niedrige Prio, nach MODEM)
 
-  MOYN Festival:
-  - scraper/scrape-moyn.js erstellt: scrapt https://moynfestival.de/line-up/
-  - Bereinigung: 99 → 83 Artists (B2B-Suffixe, doppelte SoundCloud-URLs, Event-Reihen entfernt)
-  - festivals/moyn-2026 + 83 Artists in Firebase importiert
-  - MOYN zu FESTIVAL_TEMPLATES in app.js hinzugefügt (Stages: main/forest/silent als Platzhalter)
-  - npm run scrape:moyn:dry / scrape:moyn als Scripts in scraper/package.json
+Crew Member Filter UX:
 
-  Festival-Switcher Bug Fix:
-  - festivals/modem-2026 Dokument fehlte in Firestore (Scraper hatte nur Artists angelegt)
-  - MODEM erschien deshalb nicht in der Festival-Wechseln-Liste
-  - Dokument nachträglich angelegt → MODEM ↔ MOYN Wechsel funktioniert
+- Klick auf Crew-Mitglied → automatischer Smooth-Scroll zur Bewertungsliste
+- Vorher: Filter war aktiv aber nicht sichtbar (man musste selbst scrollen)
 
-  Firebase Security Rules:
-  - crews Collection: read/create/update/delete für Members, create nur mit creator_uid == auth.uid
-  - crew_invites + crew_connections Rules entfernt (deprecated)
+MOYN Festival:
 
-🔲 Sprint 7 — Timetable Admin-Flow
+- scraper/scrape-moyn.js erstellt: scrapt https://moynfestival.de/line-up/
+- Bereinigung: 99 → 83 Artists (B2B-Suffixe, doppelte SoundCloud-URLs, Event-Reihen entfernt)
+- festivals/moyn-2026 + 83 Artists in Firebase importiert
+- MOYN zu FESTIVAL_TEMPLATES in app.js hinzugefügt (Stages: main/forest/silent als Platzhalter)
+- npm run scrape:moyn:dry / scrape:moyn als Scripts in scraper/package.json
+
+Festival-Switcher Bug Fix:
+
+- festivals/modem-2026 Dokument fehlte in Firestore (Scraper hatte nur Artists angelegt)
+- MODEM erschien deshalb nicht in der Festival-Wechseln-Liste
+- Dokument nachträglich angelegt → MODEM ↔ MOYN Wechsel funktioniert
+
+Firebase Security Rules:
+
+- crews Collection: read/create/update/delete für Members, create nur mit creator_uid == auth.uid
+- crew_invites + crew_connections Rules entfernt (deprecated)
+
+✅ Sprint 7 — Filter-Persistenz + Crew-Fixes (FERTIG, v0.14)
+- Filter-Persistenz: Stage, Status, Suche, Sort werden in localStorage gespeichert und nach Reload wiederhergestellt
+- Kommentar-Wrap: lange Kommentare in Artist-Karten umbrechen korrekt
+- HD-Logo: Logo auf Mobile < 480px zeigt "HD" statt "HEARD"
+- active_crew_id: Feld im User-Profil (Vorbereitung für Crew-Context)
+
+✅ Sprint 8 — Crew-System, Ähnlichkeitsscore, Mobile-Fix (FERTIG, v0.15)
+
+Crew-Seite vollständig:
+- Profil-Modal auch auf crew.html (Avatar-Klick → Modal statt Sofort-Logout)
+- Festival-Switcher-Pill in der Nav von crew.html (Festival wechseln ohne zur Artists-Seite zu müssen)
+- Crew-Kontext-Hinweis: zeigt aktives Festival + Erklärung wie Crew-Wechsel funktioniert
+- Crew wechseln = Festival wechseln (ein User = eine Crew, festival-agnostisch)
+
+Ähnlichkeitsscore (Crew-Match):
+- Jaccard-Score: |A ∩ B| / |A ∪ B| über want_to_see-Artists aller Crew-Mitglieder
+- 80s-Quote + Prozent in Klammern: „1.21 Gigawatt Potenzial." (54%)
+- 5 Stufen: 0–20% MacGyver / 21–40% Knight Rider / 41–60% Gigawatt / 61–80% A-Team / 81–100% TURBO BOOST
+- Placeholder wenn keine anderen Crews beim Festival
+
+Crew-System auf reales Datenmodell umgestellt:
+- Code hat immer gegen crews/{id} gelesen/geschrieben — Collection existiert nicht in Firestore
+- Echtes Datenmodell war schon immer crew_connections + crew_invites
+- Komplette Umschreibung: firebase.js, crew.js
+- Jeder User hat einen persistenten Invite-Code (getOrCreateMyInviteCode)
+- Beitreten: crew_invites/{code} → creator_uid → crew_connections updaten
+- Crew erstellen: crew_connections-Dokument anlegen + persistenten Code erstellen
+
+Mobile Kommentar-Input Fix:
+- overflow-x: hidden auf .panel → Panel kann nicht mehr horizontal scrollen
+- .crew-comment in Panel-Kontext: umbrechen statt abschneiden
+- .crew-rating-row in Panel-Kontext: flex-wrap erlaubt
+
+Update-Toast:
+- Wenn ein Admin Artists hinzufügt/entfernt: kurzer Toast "Lineup aktualisiert ✓" für alle aktiven User
+- Rating-Änderungen bleiben still (zu häufig, zu laut)
+
+Logo-Click (Prio 4 aus Sprint-8-Plan):
+- Auf index.html: Panel schließen + scroll to top (unverändert, korrekt)
+- Auf crew.html / timetable.html: normaler <a href>-Link zu index.html → kein JS-Intercept nötig
+
+🔲 Sprint 9 — Timetable Admin-Flow
 Wenn MODEM den Timetable veröffentlicht (Juli 2026):
 
 Admin fotografiert Timetable
@@ -492,7 +545,7 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Offline-Auth
     Passphrase + SHA-256, eigenes Modul offline-auth.js
     Crew-Modell
-    crews/{id}: ein Code für alle, Members-Array, Admin = Ersteller, max. 1 Crew pro Festival pro User
+    crew_connections/{id}: Members-Array, kein Festival-Filter; crew_invites/{CODE}: persistenter Code pro User. Crews sind festival-agnostisch, Scores werden über Ratings gefiltert.
     Timetable
     Admin-only, kein kollaboratives Editing
     Mehrere Festivals
@@ -522,6 +575,9 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     ✅ Service Worker Cache-Invalidierung (automatisches Update alle 60s)
     ✅ img src="" Bug im Profil-Panel
     ✅ APP_VERSION / SW-Version Mismatch
+    ✅ Crew-System: Code las aus crews/-Collection (existiert nicht) → auf crew_connections + crew_invites umgestellt (Sprint 8)
+    ✅ Avatar-Klick auf crew.html: hat direkt ausgeloggt → öffnet jetzt Profil-Modal (Sprint 8)
+    ✅ Kommentar-Panel Mobile: Panel hat Screen nach links verschoben beim Tippen → overflow-x:hidden (Sprint 8)
 
 12. Backlog (nach MODEM)
     Feature
@@ -558,12 +614,19 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
     Mittel
     v2
 
-12a. Crew-Modell Migration — ABGESCHLOSSEN (v0.12)
-Umgesetzt in Sprint 6c. Crew-Mitgliedschaft wird aus dem crews-Dokument abgeleitet
-(members-Array enthält UID). Kein crew_id-Feld im User-Profil nötig — Lookup via
-Firestore-Query: where('members', 'array-contains', uid).
+12a. Crew-Modell — KORRIGIERT (v0.15)
+Sprint 6c hatte das Datenmodell auf crews/{id} migriert (Code + Name auf der Crew, ein Code für alle).
+Diese Collection existierte jedoch nie in Firestore. Das echte Datenmodell war immer:
+- crew_connections/{id}: Members-Array, optionaler Name
+- crew_invites/{CODE}: persistenter Invite-Code pro User
 
-12b. Crew-Match — Detailkonzept (v1, nach MODEM, setzt 12a voraus)
+Sprint 8 stellt den Code korrekt auf diese Collections um. Die Invite-Logik:
+- Jeder User hat einen persistenten Code (JGDHXD, SSJVBP etc.)
+- Beitritt: Code lookup → creator's crew_connection finden → joiner hinzufügen
+- Einmal-Codes (used: true, persistent: false) sind abgelaufen
+- Persistente Codes (persistent: true) bleiben dauerhaft gültig
+
+12b. Crew-Match — TEILWEISE UMGESETZT (v0.15, vollständig v1)
 Idee: Fremde Crews mit ähnlichen musikalischen Vorlieben/Timetables finden und kennenlernen.
 
 Matching-Logik:
@@ -620,12 +683,18 @@ Warum noch nicht im Prototyp:
     Fixes: Nav-Responsive, Logo-Link, Crew-Scroll, MOYN-Import, Festival-Switcher-Bug
     ✅ Fertig (v0.13)
     7
+    Filter-Persistenz, Kommentar-Wrap, HD-Logo, active_crew_id
+    ✅ Fertig (v0.14)
+    8
+    Crew-System (Datenmodell-Fix), Ähnlichkeitsscore, Mobile-Fix, Update-Toast, Logo-Click
+    ✅ Fertig (v0.15)
+    9
     Timetable Admin-Flow (Foto → OCR → Firebase)
     🔲 Juli 2026
-    8
+    10
     MODEM-Test, Feedback sammeln
     🔲 August 2026
-    9
+    11
     v1 Planung basierend auf Feedback
     🔲 September 2026
 
