@@ -416,10 +416,16 @@ function showPassphraseSetup() {
 // ── Firestore Listeners ──
 
 function startListeners() {
+  let artistsInitialLoaded = false;
+
   const u1 = onArtistsChange(state.activeFestivalId, artists => {
+    const isUpdate = artistsInitialLoaded;
+    artistsInitialLoaded = true;
+    const countChanged = isUpdate && artists.length !== state.artists.length;
     state.artists = artists;
     cacheArtists(artists);
     render();
+    if (countChanged) showToast('Lineup aktualisiert ✓');
   });
 
   const u2 = onRatingsChange(state.activeFestivalId, ratings => {

@@ -18,6 +18,7 @@
 
       <nav class="nav">
         <a href="./index.html" class="nav-logo">H<span>D</span></a>
+        <button id="nav-festival" class="nav-festival" style="display:none"></button>
         <div class="nav-links">
           <a href="./index.html" class="nav-link">Artists</a>
           <a href="./timetable.html" class="nav-link">Timetable</a>
@@ -79,6 +80,9 @@
         <!-- ── State: In einer Crew ── -->
         <div id="in-crew-section" style="display:none">
 
+          <!-- Festival-Kontext & Crew-Wechsel-Hinweis -->
+          <p id="crew-festival-context" style="font-size:0.78rem;color:var(--text-dim);text-align:center;margin:0 0 0.75rem"></p>
+
           <!-- Crew-Name -->
           <div class="crew-name-header" id="crew-name-header">
             <span class="crew-name-display" id="crew-name-display">Meine Crew</span>
@@ -128,6 +132,12 @@
             <div id="shared-favorites" class="artist-list" style="margin-bottom:1.5rem"></div>
           </div>
 
+          <!-- Andere Crews / Ähnlichkeitsscore -->
+          <div id="crew-match-section">
+            <h2 class="section-title">Andere Crews beim Festival</h2>
+            <div id="crew-match-list"></div>
+          </div>
+
           <!-- Artist-Liste mit Crew-Ratings -->
           <h2 class="section-title" id="crew-list-title">Crew-Bewertungen</h2>
           <div id="member-filter-banner" class="member-filter-banner" style="display:none"></div>
@@ -140,6 +150,20 @@
       </main>
 
       <button id="btn-logout" style="display:none"></button>
+    </div>
+
+    <!-- ── Profil-Modal ── -->
+    <div class="panel-backdrop" id="profile-backdrop"></div>
+    <div class="panel" id="profile-panel" role="dialog" aria-modal="true" aria-label="Profil">
+      <div class="panel-handle"></div>
+      <div class="panel-content" id="profile-content"></div>
+    </div>
+
+    <!-- ── Festival Switcher Panel ── -->
+    <div class="panel-backdrop" id="festival-backdrop"></div>
+    <div class="panel" id="festival-panel" role="dialog" aria-modal="true" aria-label="Festival wechseln">
+      <div class="panel-handle"></div>
+      <div class="panel-content" id="festival-content"></div>
     </div>
 
     <script type="module" src="./js/crew.js"></script>

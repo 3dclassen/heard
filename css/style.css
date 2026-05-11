@@ -516,6 +516,7 @@ input, textarea {
   z-index: 201;
   max-height: 90dvh;
   overflow-y: auto;
+  overflow-x: hidden;
   transform: translateY(100%);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   padding-bottom: env(safe-area-inset-bottom, 0);
@@ -815,6 +816,18 @@ input, textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 120px;
+}
+
+.panel-content .crew-comment {
+  white-space: normal;
+  word-break: break-word;
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.panel-content .crew-rating-row {
+  flex-wrap: wrap;
 }
 
 /* ── Timetable ── */

@@ -298,5 +298,16 @@ export function onCrewChange(uid, festivalId, callback) {
   );
 }
 
+export function onAllCrewsChange(festivalId, callback) {
+  const q = query(collection(db, 'crews'), where('festival_id', '==', festivalId));
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    err  => {
+      console.warn('[firebase] onAllCrewsChange — kein Zugriff (Rules update nötig):', err.code);
+      callback([]);
+    }
+  );
+}
+
 // Re-exports für direkten Import in anderen Modulen
 export { serverTimestamp, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, getDocs, query, where };

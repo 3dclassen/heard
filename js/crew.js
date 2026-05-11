@@ -4,10 +4,13 @@ import {
   auth, onAuthChange, ensureUserProfile, logout,
   onArtistsChange, onRatingsChange, onUsersChange,
   createCrew, joinCrewByCode, leaveCrew, regenerateCrewCode,
-  onCrewChange, saveCrewName
+  onCrewChange, saveCrewName,
+  onFestivalsChange, saveActiveFestival,
+  onAllCrewsChange
 } from './firebase.js';
 import { isOnline } from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
+import { hasOfflineHash } from './offline-auth.js';
 
 let state = {
   user:             null,
@@ -16,6 +19,8 @@ let state = {
   users:            [],
   artists:          [],
   ratings:          [],
+  festivals:        [],
+  allCrews:         [],
   filterMember:     null,
   activeFestivalId: 'modem-2026',
   unsubscribers:    []
@@ -64,7 +69,7 @@ onAuthChange(async user => {
 function setupNav() {
   const img = $('nav-avatar-img');
   if (img && state.user?.photoURL) img.src = state.user.photoURL;
-  $('nav-avatar')?.addEventListener('click', logout);
+  $('nav-avatar')?.addEventListener('click', openProfileModal);
   $('btn-logout')?.addEventListener('click', logout);
 
   if (state.userProfile?.role === 'admin') {
@@ -255,7 +260,17 @@ function startListeners() {
     render();
   });
 
-  state.unsubscribers = [u1, u2, u3, u4];
+  const u5 = onFestivalsChange(festivals => {
+    state.festivals = festivals;
+    updateNavFestival();
+  });
+
+  const u6 = onAllCrewsChange(state.activeFestivalId, allCrews => {
+    state.allCrews = allCrews;
+    render();
+  });
+
+  state.unsubscribers = [u1, u2, u3, u4, u5, u6];
 }
 
 // ── Render ──
@@ -268,6 +283,7 @@ function render() {
     renderCrewMembers();
     renderMemberFilterBanner();
     renderSharedFavorites();
+    renderCrewMatch();
     renderCrewArtistList();
   } else {
     $('no-crew-section').style.display  = '';
@@ -284,6 +300,13 @@ function renderCrewHeader() {
 
   const regenBtn = $('btn-regen-code');
   if (regenBtn) regenBtn.style.display = isAdmin() ? '' : 'none';
+
+  const ctxEl = $('crew-festival-context');
+  if (ctxEl) {
+    const f = state.festivals.find(f => f.id === state.activeFestivalId);
+    const name = f?.name || state.activeFestivalId;
+    ctxEl.textContent = `${name} · Crew wechseln = Festival wechseln (Profil oben rechts)`;
+  }
 }
 
 function renderCrewMembers() {
@@ -379,6 +402,67 @@ function renderSharedFavorites() {
     </div>`).join('');
 }
 
+function jaccardScore(myIds, otherIds, ratings) {
+  const mySet    = new Set(ratings.filter(r => myIds.includes(r.user_id) && r.want_to_see).map(r => r.artist_id));
+  const otherSet = new Set(ratings.filter(r => otherIds.includes(r.user_id) && r.want_to_see).map(r => r.artist_id));
+  if (mySet.size === 0 && otherSet.size === 0) return 0;
+  const intersection = [...mySet].filter(id => otherSet.has(id)).length;
+  const union = new Set([...mySet, ...otherSet]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+function scoreQuote(score) {
+  const pct = Math.round(score * 100);
+  let quote;
+  if (score <= 0.20)      quote = 'Das reicht für einen Händedruck, MacGyver.';
+  else if (score <= 0.40) quote = 'Ähnlich wie Knight Rider und ein normales Auto.';
+  else if (score <= 0.60) quote = '1.21 Gigawatt Potenzial.';
+  else if (score <= 0.80) quote = 'Ich liebe es wenn ein Plan funktioniert.';
+  else                    quote = 'TURBO BOOST. Das ist euer Match.';
+  return { quote, pct };
+}
+
+function renderCrewMatch() {
+  const section = $('crew-match-section');
+  const el      = $('crew-match-list');
+  if (!el || !section) return;
+
+  const myIds = myCrewUserIds();
+  const otherCrews = state.allCrews.filter(c => c.id !== state.crew?.id);
+
+  if (otherCrews.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state" style="padding:1rem 0">
+        <p style="color:var(--text-dim);font-size:0.85rem">Noch keine anderen Crews beim Festival — kommt bald! 🎪</p>
+      </div>`;
+    section.style.display = '';
+    return;
+  }
+
+  const scored = otherCrews
+    .map(c => {
+      const score = jaccardScore(myIds, c.members || [], state.ratings);
+      return { crew: c, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  el.innerHTML = scored.map(({ crew, score }) => {
+    const { quote, pct } = scoreQuote(score);
+    return `
+      <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;gap:0.4rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="artist-name">${esc(crew.name || 'Unbekannte Crew')}</span>
+          <span style="font-size:0.75rem;color:var(--text-dim)">${(crew.members || []).length} Mitglied${(crew.members || []).length !== 1 ? 'er' : ''}</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-muted);font-style:italic">
+          „${esc(quote)}" <span style="color:var(--accent-light);font-style:normal;font-weight:600">(${pct}%)</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  section.style.display = '';
+}
+
 function renderCrewArtistList() {
   const el = $('crew-artist-list');
   if (!el) return;
@@ -455,6 +539,140 @@ function renderCrewArtistList() {
     el.innerHTML = `<div class="empty-state"><p>Noch keine Crew-Bewertungen vorhanden.</p></div>`;
   }
 }
+
+// ── Festival-Nav ──
+
+function updateNavFestival() {
+  const btn = $('nav-festival');
+  if (!btn) return;
+  const f = state.festivals.find(f => f.id === state.activeFestivalId);
+  if (!f) { btn.style.display = 'none'; return; }
+  btn.textContent = f.name;
+  btn.style.display = '';
+}
+
+// ── Festival-Panel ──
+
+const festivalBackdrop = $('festival-backdrop');
+const festivalPanel    = $('festival-panel');
+
+function openFestivalPanel() {
+  renderFestivalList();
+  festivalBackdrop?.classList.add('open');
+  festivalPanel?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFestivalPanel() {
+  festivalBackdrop?.classList.remove('open');
+  festivalPanel?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+festivalBackdrop?.addEventListener('click', closeFestivalPanel);
+$('nav-festival')?.addEventListener('click', openFestivalPanel);
+
+function renderFestivalList() {
+  $('festival-content').innerHTML = `
+    <div class="panel-header" style="margin-bottom:1rem">
+      <div class="panel-artist-name" style="font-size:1.1rem">Festival wechseln</div>
+    </div>
+    <div class="festival-list">
+      ${state.festivals.map(f => `
+        <button class="festival-list-item ${f.id === state.activeFestivalId ? 'active' : ''}"
+                data-fid="${esc(f.id)}">
+          <div class="festival-list-name">${esc(f.name)}</div>
+          <div class="festival-list-loc">${esc(f.location || '')}</div>
+          ${f.id === state.activeFestivalId ? '<span class="festival-active-check">✓</span>' : ''}
+        </button>`).join('')}
+    </div>
+  `;
+  $('festival-content').querySelectorAll('.festival-list-item').forEach(btn => {
+    btn.addEventListener('click', () => switchFestival(btn.dataset.fid));
+  });
+}
+
+async function switchFestival(festivalId) {
+  if (festivalId === state.activeFestivalId) { closeFestivalPanel(); return; }
+
+  state.unsubscribers.forEach(u => u?.());
+  state.unsubscribers = [];
+
+  state.activeFestivalId = festivalId;
+  state.crew             = null;
+  state.artists          = [];
+  state.ratings          = [];
+  state.allCrews         = [];
+  state.filterMember     = null;
+
+  await saveActiveFestival(state.user.uid, festivalId);
+  startListeners();
+  render();
+  closeFestivalPanel();
+}
+
+// ── Profil-Modal ──
+
+const profileBackdrop = $('profile-backdrop');
+const profilePanel    = $('profile-panel');
+
+function openProfileModal() {
+  const user = state.user;
+  if (!user) return;
+
+  const avatarHtml = user.photoURL
+    ? `<img src="${esc(user.photoURL)}" alt="" style="width:100%;height:100%;object-fit:cover">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
+
+  const passphraseStatus = hasOfflineHash()
+    ? `<span style="color:var(--success);font-size:0.8rem">✓ Offline-Passphrase eingerichtet</span>`
+    : `<span style="color:var(--warning);font-size:0.8rem">⚠ Noch keine Passphrase – auf der Artists-Seite einrichten</span>`;
+
+  const activeFestival = state.festivals.find(f => f.id === state.activeFestivalId);
+
+  $('profile-content').innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">${avatarHtml}</div>
+      <div>
+        <div class="profile-name">${esc(user.displayName || '—')}</div>
+        <div class="profile-email">${esc(user.email || '')}</div>
+      </div>
+    </div>
+    <div class="profile-festival-row">
+      <div>
+        <div class="profile-festival-name">${esc(activeFestival?.name || state.activeFestivalId)}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${esc(activeFestival?.location || '')}</div>
+      </div>
+      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">Wechseln</button>
+    </div>
+    <div style="padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      ${passphraseStatus}
+    </div>
+    <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
+  `;
+
+  $('btn-switch-festival')?.addEventListener('click', () => {
+    closeProfileModal();
+    openFestivalPanel();
+  });
+
+  $('btn-logout-modal')?.addEventListener('click', async () => {
+    closeProfileModal();
+    await logout();
+  });
+
+  profileBackdrop?.classList.add('open');
+  profilePanel?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProfileModal() {
+  profileBackdrop?.classList.remove('open');
+  profilePanel?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+profileBackdrop?.addEventListener('click', closeProfileModal);
 
 // ── Hilfsfunktionen ──
 
