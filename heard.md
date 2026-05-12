@@ -311,7 +311,8 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.auth.uid in request.resource.data.members;
       allow update: if request.auth != null &&
-        request.auth.uid in resource.data.members;
+        (request.auth.uid in resource.data.members ||
+         request.auth.uid in request.resource.data.members);
       allow delete: if request.auth != null &&
         request.auth.uid in resource.data.members;
     }
