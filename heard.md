@@ -281,7 +281,7 @@ Die crews-Collection wurde in Sprint 6c angelegt aber nie mit echten Daten befü
 
 service cloud.firestore {
 
-  match /databases/{database}/documents {
+match /databases/{database}/documents {
 
     match /festivals/{festivalId} {
       allow read: if request.auth != null;
@@ -326,7 +326,7 @@ service cloud.firestore {
         resource.data.creator_uid == request.auth.uid;
     }
 
-  }
+}
 
 }
 
@@ -487,6 +487,7 @@ Firebase Security Rules:
 - crew_invites + crew_connections Rules entfernt (deprecated)
 
 ✅ Sprint 7 — Filter-Persistenz + Crew-Fixes (FERTIG, v0.14)
+
 - Filter-Persistenz: Stage, Status, Suche, Sort werden in localStorage gespeichert und nach Reload wiederhergestellt
 - Kommentar-Wrap: lange Kommentare in Artist-Karten umbrechen korrekt
 - HD-Logo: Logo auf Mobile < 480px zeigt "HD" statt "HEARD"
@@ -495,18 +496,21 @@ Firebase Security Rules:
 ✅ Sprint 8 — Crew-System, Ähnlichkeitsscore, Mobile-Fix (FERTIG, v0.15)
 
 Crew-Seite vollständig:
+
 - Profil-Modal auch auf crew.html (Avatar-Klick → Modal statt Sofort-Logout)
 - Festival-Switcher-Pill in der Nav von crew.html (Festival wechseln ohne zur Artists-Seite zu müssen)
 - Crew-Kontext-Hinweis: zeigt aktives Festival + Erklärung wie Crew-Wechsel funktioniert
 - Crew wechseln = Festival wechseln (ein User = eine Crew, festival-agnostisch)
 
 Ähnlichkeitsscore (Crew-Match):
+
 - Jaccard-Score: |A ∩ B| / |A ∪ B| über want_to_see-Artists aller Crew-Mitglieder
 - 80s-Quote + Prozent in Klammern: „1.21 Gigawatt Potenzial." (54%)
 - 5 Stufen: 0–20% MacGyver / 21–40% Knight Rider / 41–60% Gigawatt / 61–80% A-Team / 81–100% TURBO BOOST
 - Placeholder wenn keine anderen Crews beim Festival
 
 Crew-System auf reales Datenmodell umgestellt:
+
 - Code hat immer gegen crews/{id} gelesen/geschrieben — Collection existiert nicht in Firestore
 - Echtes Datenmodell war schon immer crew_connections + crew_invites
 - Komplette Umschreibung: firebase.js, crew.js
@@ -515,15 +519,18 @@ Crew-System auf reales Datenmodell umgestellt:
 - Crew erstellen: crew_connections-Dokument anlegen + persistenten Code erstellen
 
 Mobile Kommentar-Input Fix:
+
 - overflow-x: hidden auf .panel → Panel kann nicht mehr horizontal scrollen
 - .crew-comment in Panel-Kontext: umbrechen statt abschneiden
 - .crew-rating-row in Panel-Kontext: flex-wrap erlaubt
 
 Update-Toast:
+
 - Wenn ein Admin Artists hinzufügt/entfernt: kurzer Toast "Lineup aktualisiert ✓" für alle aktiven User
 - Rating-Änderungen bleiben still (zu häufig, zu laut)
 
 Logo-Click (Prio 4 aus Sprint-8-Plan):
+
 - Auf index.html: Panel schließen + scroll to top (unverändert, korrekt)
 - Auf crew.html / timetable.html: normaler <a href>-Link zu index.html → kein JS-Intercept nötig
 
@@ -618,10 +625,12 @@ Kein kollaboratives Editing, kein Drag & Drop im Prototyp. Admin hat vollständi
 12a. Crew-Modell — KORRIGIERT (v0.15)
 Sprint 6c hatte das Datenmodell auf crews/{id} migriert (Code + Name auf der Crew, ein Code für alle).
 Diese Collection existierte jedoch nie in Firestore. Das echte Datenmodell war immer:
+
 - crew_connections/{id}: Members-Array, optionaler Name
 - crew_invites/{CODE}: persistenter Invite-Code pro User
 
 Sprint 8 stellt den Code korrekt auf diese Collections um. Die Invite-Logik:
+
 - Jeder User hat einen persistenten Code (JGDHXD, SSJVBP etc.)
 - Beitritt: Code lookup → creator's crew_connection finden → joiner hinzufügen
 - Einmal-Codes (used: true, persistent: false) sind abgelaufen

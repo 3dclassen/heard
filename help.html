@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HEARD">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>HEARD — Hilfe</title>
+</head>
+<body>
+
+  <div id="app-shell" class="visible">
+
+    <nav class="nav">
+      <a href="./index.html" class="nav-logo">H<span>D</span></a>
+      <div class="nav-links">
+        <a href="./index.html"     class="nav-link">Artists</a>
+        <a href="./timetable.html" class="nav-link">Timetable</a>
+        <a href="./crew.html"      class="nav-link">Crew</a>
+        <a href="./help.html"      class="nav-link active">Hilfe</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+      </div>
+      <div class="nav-avatar" id="nav-avatar" style="display:none">
+        <img id="nav-avatar-img" src="" alt="Avatar">
+      </div>
+    </nav>
+
+    <main class="main faq-main">
+      <h1 class="page-title">Hilfe & FAQ</h1>
+
+      <!-- ── Festival & Admin ── -->
+      <section class="faq-section">
+        <h2 class="faq-section-title">Festival & Admin</h2>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie wechsle ich das aktive Festival?</summary>
+          <div class="faq-answer">
+            <p>Tippe oben rechts auf deinen <strong>Avatar</strong> → Profil-Overlay öffnet sich → Button <strong>„Wechseln"</strong> → Festival-Liste erscheint → gewünschtes Festival antippen.</p>
+            <p>Das aktive Festival gilt für Artists, Timetable und Crew gleichzeitig.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie lege ich ein neues Festival an?</summary>
+          <div class="faq-answer">
+            <p>Gleicher Weg wie „Festival wechseln": Avatar → Profil → „Wechseln" → ganz unten <strong>„+ Neues Festival anlegen"</strong>.</p>
+            <p>Wähle eine Vorlage (z.&nbsp;B. MOYN, MODEM, Fusion …) – Name, Ort und Stages werden automatisch vorausgefüllt. Du kannst alles anpassen.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie bearbeite ich ein bestehendes Festival (Name, Ort, Artists)?</summary>
+          <div class="faq-answer">
+            <p>Das geht nur als <strong>Admin</strong>: In der Navigation erscheint für Admins der Link <strong>„Admin"</strong>. Dort kannst du Festival-Name und Ort ändern, Artists hinzufügen, bearbeiten oder löschen und JSON-Importe vom Scraper einspielen.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie werde ich Admin?</summary>
+          <div class="faq-answer">
+            <p>Admin-Rechte müssen manuell in der <strong>Firebase/Firestore Console</strong> vergeben werden. Dazu muss im Dokument <code>users/{deine-uid}</code> das Feld <code>role</code> auf <code>"admin"</code> gesetzt werden. Das kann nur jemand tun, der bereits Zugriff auf das Firebase-Projekt hat.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- ── Crew ── -->
+      <section class="faq-section">
+        <h2 class="faq-section-title">Crew</h2>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie erstelle ich eine Crew?</summary>
+          <div class="faq-answer">
+            <p>Gehe zu <a href="./crew.html">Crew</a> → Bereich <strong>„Neue Crew erstellen"</strong> → Crew-Namen eingeben → <strong>„Crew erstellen"</strong> klicken.</p>
+            <p>Du bekommst einen dauerhaften Einladungs-Code, den du mit Freunden teilen kannst.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie trete ich einer bestehenden Crew bei?</summary>
+          <div class="faq-answer">
+            <p>Gehe zu <a href="./crew.html">Crew</a> → Bereich <strong>„Crew beitreten"</strong> → 6-stelligen Code eingeben, den du von einem Crew-Mitglied erhalten hast → <strong>„Beitreten"</strong> klicken.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Was zeigt die Crew-Ansicht?</summary>
+          <div class="faq-answer">
+            <p>Die Crew-Seite vergleicht eure Bewertungen und zeigt:</p>
+            <ul>
+              <li><strong>Gemeinsame Favoriten</strong> – Artists, die alle Mitglieder mit ≥&nbsp;4 Sternen bewertet haben.</li>
+              <li><strong>Crew-Bewertungen</strong> – Artistliste mit den Ratings aller Mitglieder nebeneinander.</li>
+              <li><strong>Ähnlichkeitsscore</strong> mit anderen Crews beim Festival (Jaccard-Index).</li>
+            </ul>
+            <p>Du kannst einzelne Crew-Mitglieder antippen, um nur deren Bewertungen zu sehen.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- ── Nutzung & Features ── -->
+      <section class="faq-section">
+        <h2 class="faq-section-title">Nutzung & Features</h2>
+
+        <details class="faq-item">
+          <summary class="faq-question">Was ist der Offline-Login / die Passphrase?</summary>
+          <div class="faq-answer">
+            <p>HEARD funktioniert auch ohne Internet. Damit du dich offline anmelden kannst, wird beim ersten Login eine <strong>Passphrase</strong> vorgeschlagen (basierend auf deinen Top-Favoriten). Diese wird lokal gespeichert.</p>
+            <p>Auf dem Festival: WLAN-los → HEARD öffnen → Passphrase eingeben → fertig.</p>
+            <p><strong>Passphrase vergessen?</strong> Kurz ins WLAN → Google-Login → Avatar → Profil → neue Passphrase setzen.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Wie bewerte ich einen Artist?</summary>
+          <div class="faq-answer">
+            <p>Auf der <a href="./index.html">Artists-Seite</a> einen Artist antippen → Detail-Panel öffnet sich → Sterne vergeben (1–5), Kommentar schreiben, „Reingehört" oder „Will ich sehen" markieren.</p>
+            <p>Alle Änderungen werden sofort in Firestore gespeichert – auch offline (Sync beim nächsten Online-Moment).</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Was zeigt der persönliche Timetable?</summary>
+          <div class="faq-answer">
+            <p>Der <a href="./timetable.html">Timetable</a> listet alle Artists, die du mit <strong>4 oder 5 Sternen</strong> bewertet hast <em>und</em> für die eine Spielzeit eingetragen ist.</p>
+            <p>Er erkennt automatisch <strong>Überschneidungen</strong> (zwei Favoriten gleichzeitig auf verschiedenen Stages) und hebt diese farblich hervor.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Kann ich HEARD als App auf meinem Handy installieren?</summary>
+          <div class="faq-answer">
+            <p>Ja – HEARD ist eine <strong>Progressive Web App (PWA)</strong>.</p>
+            <ul>
+              <li><strong>iPhone/iPad:</strong> Safari → Teilen-Symbol → „Zum Home-Bildschirm" hinzufügen.</li>
+              <li><strong>Android:</strong> Chrome → Menü (⋮) → „App installieren" oder „Zum Startbildschirm hinzufügen".</li>
+            </ul>
+            <p>Nach der Installation verhält sich HEARD wie eine native App – inklusive Offline-Unterstützung.</p>
+          </div>
+        </details>
+      </section>
+
+    </main>
+  </div>
+
+</body>
+</html>
