@@ -21,6 +21,8 @@ import {
   generatePassphraseSuggestion
 } from './offline-auth.js';
 
+import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
+
 // ── Konstante ──
 
 const APP_VERSION = '0.16';
@@ -41,53 +43,10 @@ const FESTIVAL_TEMPLATES = [
   { name: 'Manuell eingeben',     location: '',            stages: [] },
 ];
 
-// ── 80er-Zitate ──
-
-const QUOTES = {
-  fiveStars: [
-    "Ich liebe es wenn ein Plan funktioniert.",       // Hannibal — A-Team
-    "Das war kein Zufall — das war Talent.",          // MacGyver
-    "Schön. Sehr schön sogar.",                       // Derrick
-  ],
-  oneStar: [
-    "Wissen Sie, ich hab heute schon 4 Touchdowns gemacht.",  // Al Bundy
-    "Ich hab Schlimmeres überlebt, Murdock.",                 // A-Team
-    "Ha! I kill me.",                                         // ALF
-  ],
-  offlineLoginSuccess: [
-    "I'll be back. Aber erstmal: du bist drin.",   // Terminator
-    "Turbo Boost, KITT. Wir fahren offline.",       // Knight Rider
-    "Nobody puts Baby offline.",                    // Dirty Dancing
-  ],
-  passphraseSetup: [
-    "Ha! I kill me. Und meine Passphrase.",              // ALF
-    "Du hast 5 Sekunden. Okay, mehr. Aber denk nach.",   // MacGyver
-    "Schreib sie auf. Wirklich. Al Bundy hätte es nicht getan — und schau wie es ihm geht.",
-  ],
-  timetableConflict: [
-    "Turbo Boost, KITT — ich brauch eine andere Route!",  // Knight Rider
-    "Murdock, wir können nicht an zwei Orten gleichzeitig sein.",
-    "MacGyver hätte sich das besser eingeteilt.",
-  ],
-  commentPlaceholders: [
-    "Ha! I kill me.",
-    "Was sagst du wenn du nach Hause kommst?",
-    "Sag's wie Al Bundy: kurz, ehrlich, unvergesslich.",
-    "Drei Worte. Oder Emojis. Oder beides.",
-    "Murdock würde hier etwas Verrücktes schreiben.",
-    "Was hat dein Unterbewusstsein gehört?",
-    "\"Ich komm' wieder.\" — und wie war's?",
-    "MacGyver-Analyse: Potential vorhanden?",
-  ],
-  emptyOffline: [
-    "Ich bin nicht hier um zu verlieren.",    // Colt Sievers
-    "Ohne Daten kann auch Hannibal keinen Plan machen.",
-  ],
-};
+// ── 80er-Zitate (via i18n) ──
 
 function randomQuote(key) {
-  const arr = QUOTES[key] || [];
-  return arr[Math.floor(Math.random() * arr.length)] || '';
+  return i18nRandomQuote(key);
 }
 
 // ── State ──
@@ -163,21 +122,22 @@ const panelBackdrop      = $('panel-backdrop');
 const panel              = $('panel');
 
 // ── Service Worker ──
-
+// controllerchange außerhalb des load-Events registrieren (Race Condition fix)
 if ('serviceWorker' in navigator) {
+  let swUpdateHandled = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!swUpdateHandled) {
+      swUpdateHandled = true;
+      showUpdateToast();
+    }
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
-      console.log('[sw] registriert:', reg.scope);
       setInterval(() => reg.update(), 60_000);
     });
-
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data?.type === 'SYNC_REQUESTED') syncOfflineRatings();
-      if (e.data?.type === 'SW_UPDATED')     window.location.reload();
-    });
-
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
     });
   });
 }
@@ -188,7 +148,7 @@ btnLogin?.addEventListener('click', async () => {
   try {
     await loginWithGoogle();
   } catch (err) {
-    showToast('Login fehlgeschlagen', 'error');
+    showToast(t('toast.login_error'), 'error');
     console.error(err);
   }
 });
@@ -197,7 +157,7 @@ $('btn-login-microsoft')?.addEventListener('click', async () => {
   try {
     await loginWithMicrosoft();
   } catch (err) {
-    showToast('Microsoft-Login fehlgeschlagen', 'error');
+    showToast(t('toast.ms_login_error'), 'error');
     console.error(err);
   }
 });
@@ -272,7 +232,7 @@ function showOfflineLogin() {
 
   if (cached?.displayName) {
     const greeting = $('offline-user-greeting');
-    if (greeting) greeting.textContent = `Hey ${cached.displayName.split(' ')[0]}. Du bist offline.`;
+    if (greeting) greeting.textContent = `Hey ${cached.displayName.split(' ')[0]}. ${t('offline.greeting')}`;
   }
 }
 
@@ -289,7 +249,7 @@ function loadOfflineWithoutAuth() {
   showApp();
   if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
   render();
-  showToast('Offline — keine Passphrase eingerichtet. Daten aus Cache geladen.', 'error');
+  showToast(t('offline.banner'), 'error');
 }
 
 $('btn-offline-login')?.addEventListener('click', async () => {
@@ -349,24 +309,24 @@ function showPassphraseSetup() {
 
   $('passphrase-content').innerHTML = `
     <div class="panel-header">
-      <div class="panel-artist-name" style="font-size:1.1rem">Festival-Passphrase einrichten</div>
+      <div class="panel-artist-name" style="font-size:1.1rem">${t('passphrase.title')}</div>
     </div>
     <div class="passphrase-setup-hint">
-      Auf dem Festival gibt's kein Internet. Mit dieser Passphrase kannst du dich trotzdem einloggen.<br>
-      <strong>Schreib sie auf — oder schick sie dir per WhatsApp.</strong>
+      ${t('passphrase.hint')}<br>
+      <strong>${t('passphrase.write_down')}</strong>
     </div>
     <div>
-      <div class="passphrase-suggestion-label">Vorschlag (tippen zum Übernehmen):</div>
+      <div class="passphrase-suggestion-label">${t('passphrase.suggestion_label')}</div>
       <div class="passphrase-suggestion-box" id="passphrase-suggestion">${escHtml(suggestion)}</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.75rem">
-      <input type="text" id="passphrase-input-1" class="passphrase-input" placeholder="Passphrase eingeben..." value="">
-      <input type="text" id="passphrase-input-2" class="passphrase-input" placeholder="Passphrase bestätigen...">
-      <p id="passphrase-match-error" style="color:var(--danger);font-size:0.85rem;display:none">Die Passphrases stimmen nicht überein.</p>
+      <input type="text" id="passphrase-input-1" class="passphrase-input" placeholder="${t('passphrase.input_1')}" value="">
+      <input type="text" id="passphrase-input-2" class="passphrase-input" placeholder="${t('passphrase.input_2')}">
+      <p id="passphrase-match-error" style="color:var(--danger);font-size:0.85rem;display:none">${t('passphrase.mismatch')}</p>
     </div>
     <p class="quote-hint">${escHtml(randomQuote('passphraseSetup'))}</p>
-    <button class="btn-save" id="btn-save-passphrase">Passphrase speichern</button>
-    <button id="btn-skip-passphrase" style="color:var(--text-muted);font-size:0.85rem;background:none;padding:0.25rem">Später einrichten</button>
+    <button class="btn-save" id="btn-save-passphrase">${t('passphrase.save')}</button>
+    <button id="btn-skip-passphrase" style="color:var(--text-muted);font-size:0.85rem;background:none;padding:0.25rem">${t('passphrase.skip')}</button>
   `;
 
   $('passphrase-suggestion')?.addEventListener('click', () => {
@@ -383,7 +343,7 @@ function showPassphraseSetup() {
     const errEl = $('passphrase-match-error');
 
     if (!p1 || p1.length < 6) {
-      showToast('Bitte mindestens 6 Zeichen eingeben', 'error'); return;
+      showToast(t('toast.min_length'), 'error'); return;
     }
     if (p1 !== p2) {
       if (errEl) errEl.style.display = '';
@@ -393,7 +353,7 @@ function showPassphraseSetup() {
 
     const btn = $('btn-save-passphrase');
     btn.disabled = true;
-    btn.textContent = 'Wird gespeichert...';
+    btn.textContent = t('passphrase.saving');
 
     const hash = await setupPassphrase(p1);
 
@@ -405,7 +365,7 @@ function showPassphraseSetup() {
     }
 
     closePassphrasePanel();
-    showToast('Passphrase gespeichert. I\'ll be back — auch offline.', 'success');
+    showToast(t('toast.passphrase_saved'), 'success');
   });
 
   $('btn-skip-passphrase')?.addEventListener('click', closePassphrasePanel);
@@ -425,7 +385,7 @@ function startListeners() {
     state.artists = artists;
     cacheArtists(artists);
     render();
-    if (countChanged) showToast('Lineup aktualisiert ✓');
+    if (countChanged) showToast(t('toast.lineup_updated'));
   });
 
   const u2 = onRatingsChange(state.activeFestivalId, ratings => {
@@ -477,7 +437,7 @@ if (!isOnline()) {
 async function syncOfflineRatings() {
   if (!isOnline() || !state.user) return;
   const result = await syncPendingToFirebase(data => saveRating(data));
-  if (result?.synced > 0) showToast(`${result.synced} Bewertung(en) synchronisiert`);
+  if (result?.synced > 0) showToast(`${result.synced} ${t('toast.synced')}`);
 }
 
 // ── Filter ──
@@ -498,7 +458,7 @@ function renderStagePills() {
 
   const stageLabel = s => labels[s] || (s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' '));
 
-  container.innerHTML = `<button class="pill active" data-stage="all">Alle Stages</button>` +
+  container.innerHTML = `<button class="pill active" data-stage="all">${t('filter.all_stages')}</button>` +
     stages.map(s => `<button class="pill" data-stage="${escHtml(s)}">${escHtml(stageLabel(s))}</button>`).join('');
 
   container.querySelectorAll('[data-stage]').forEach(btn => {
@@ -554,7 +514,7 @@ async function switchFestival(festivalId) {
   render();
   closeFestivalPanel();
   const f = state.festivals.find(f => f.id === festivalId);
-  showToast(`Festival gewechselt: ${f?.name || festivalId}`);
+  showToast(`${t('toast.festival_switched')} ${f?.name || festivalId}`);
 }
 
 const festivalBackdrop = $('festival-backdrop');
@@ -580,7 +540,7 @@ $('nav-festival')?.addEventListener('click', openFestivalPanel);
 function renderFestivalList() {
   $('festival-content').innerHTML = `
     <div class="panel-header" style="margin-bottom:1rem">
-      <div class="panel-artist-name" style="font-size:1.1rem">Festival wechseln</div>
+      <div class="panel-artist-name" style="font-size:1.1rem">${t('festival.switch_title')}</div>
     </div>
     <div class="festival-list">
       ${state.festivals.map(f => `
@@ -591,7 +551,7 @@ function renderFestivalList() {
           ${f.id === state.activeFestivalId ? '<span class="festival-active-check">✓</span>' : ''}
         </button>`).join('')}
     </div>
-    <button class="festival-create-btn" id="btn-festival-create">+ Neues Festival anlegen</button>
+    <button class="festival-create-btn" id="btn-festival-create">${t('festival.create_btn')}</button>
   `;
 
   $('festival-content').querySelectorAll('.festival-list-item').forEach(btn => {
@@ -606,27 +566,27 @@ function renderFestivalCreate() {
   $('festival-content').innerHTML = `
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem">
       <button id="btn-festival-back" style="color:var(--text-muted);font-size:1.1rem;background:none;padding:0.25rem">←</button>
-      <div class="panel-artist-name" style="font-size:1.1rem">Neues Festival</div>
+      <div class="panel-artist-name" style="font-size:1.1rem">${t('festival.new_title')}</div>
     </div>
     <div class="input-group">
-      <label>Vorlage</label>
+      <label>${t('festival.template')}</label>
       <select id="festival-template-select" class="select-input">
-        ${FESTIVAL_TEMPLATES.map((t,i) => `<option value="${i}">${escHtml(t.name)}</option>`).join('')}
+        ${FESTIVAL_TEMPLATES.map((tmpl,i) => `<option value="${i}">${escHtml(tmpl.name)}</option>`).join('')}
       </select>
     </div>
     <div class="input-group">
-      <label>Name</label>
-      <input type="text" id="festival-name-input" class="text-input" placeholder="Festival-Name..." maxlength="60">
+      <label>${t('festival.name_label')}</label>
+      <input type="text" id="festival-name-input" class="text-input" placeholder="${t('festival.name_placeholder')}" maxlength="60">
     </div>
     <div class="input-group">
-      <label>Ort / Land</label>
-      <input type="text" id="festival-location-input" class="text-input" placeholder="z.B. Kroatien" maxlength="60">
+      <label>${t('festival.location_label')}</label>
+      <input type="text" id="festival-location-input" class="text-input" placeholder="${t('festival.loc_placeholder')}" maxlength="60">
     </div>
     <div class="input-group">
-      <label>Jahr</label>
+      <label>${t('festival.year_label')}</label>
       <input type="number" id="festival-year-input" class="text-input" value="${year}" min="2020" max="2099">
     </div>
-    <button class="btn-save" id="btn-festival-save">Festival anlegen</button>
+    <button class="btn-save" id="btn-festival-save">${t('festival.create')}</button>
     <p id="festival-create-error" style="color:var(--danger);font-size:0.85rem;display:none;margin-top:0.5rem"></p>
   `;
 
@@ -635,10 +595,10 @@ function renderFestivalCreate() {
   const locInput     = $('festival-location-input');
 
   const applyTemplate = () => {
-    const t = FESTIVAL_TEMPLATES[parseInt(templateSel.value)];
-    if (t.name !== 'Manuell eingeben') {
-      nameInput.value = t.name;
-      locInput.value  = t.location;
+    const tmpl = FESTIVAL_TEMPLATES[parseInt(templateSel.value)];
+    if (tmpl.name !== 'Manuell eingeben') {
+      nameInput.value = tmpl.name;
+      locInput.value  = tmpl.location;
     }
   };
   templateSel?.addEventListener('change', applyTemplate);
@@ -653,7 +613,7 @@ function renderFestivalCreate() {
     const errEl    = $('festival-create-error');
 
     if (!name) {
-      errEl.textContent = 'Bitte einen Festival-Namen eingeben.';
+      errEl.textContent = t('festival.name_required');
       errEl.style.display = '';
       return;
     }
@@ -662,7 +622,7 @@ function renderFestivalCreate() {
     const stages = tpl.stages.length ? tpl.stages : ['main'];
     const btn    = $('btn-festival-save');
     btn.disabled = true;
-    btn.textContent = 'Wird angelegt...';
+    btn.textContent = t('festival.creating');
 
     try {
       const festivalId = await saveFestival(null, {
@@ -674,7 +634,7 @@ function renderFestivalCreate() {
       errEl.textContent = 'Fehler: ' + err.message;
       errEl.style.display = '';
       btn.disabled = false;
-      btn.textContent = 'Festival anlegen';
+      btn.textContent = t('festival.create');
     }
   });
 }
@@ -744,8 +704,8 @@ function render() {
       <div class="empty-state">
         <div class="empty-state-icon">🎵</div>
         <p>${state.artists.length === 0
-          ? `Noch keine Artists geladen. Ein Admin muss zuerst den Scraper ausführen.`
-          : 'Keine Artists für diesen Filter.'}</p>
+          ? t('empty.no_artists_admin')
+          : t('empty.no_artists_filter')}</p>
         ${quote ? `<p class="quote-hint" style="margin-top:0.5rem">${escHtml(quote)}</p>` : ''}
       </div>`;
     return;
@@ -860,9 +820,9 @@ function renderPanel(artist) {
   const scBtn = artist.soundcloud_url
     ? `<a href="${escHtml(artist.soundcloud_url)}" target="_blank" rel="noopener" class="btn-soundcloud">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1.175 12.225c-.015.128-.026.257-.026.389 0 .132.011.261.026.389-.015-.128-.026-.257-.026-.389 0-.132.011-.261.026-.389zm.93-2.02a2.94 2.94 0 0 0-.385.026 4.394 4.394 0 0 1 3.863-2.308c.18 0 .357.012.531.033a6.44 6.44 0 0 1 5.15-2.582 6.44 6.44 0 0 1 6.44 6.44c0 .09-.002.18-.006.27H18a2 2 0 0 1 0 4H3.105a2.94 2.94 0 0 1 0-5.879z"/></svg>
-        Auf SoundCloud anhören
+        ${t('panel.soundcloud')}
        </a>`
-    : `<span style="color:var(--text-muted);font-size:0.85rem">Kein SoundCloud-Link vorhanden</span>`;
+    : `<span style="color:var(--text-muted);font-size:0.85rem">${t('panel.no_soundcloud')}</span>`;
 
   const crewHtml = crewRatings.length > 0
     ? crewRatings.map(r => {
@@ -878,7 +838,7 @@ function renderPanel(artist) {
             ${r.want_to_see ? '<span style="color:var(--seed)">♥</span>' : ''}
           </div>`;
       }).join('')
-    : '<p style="color:var(--text-muted);font-size:0.85rem">Noch keine Crew-Bewertungen</p>';
+    : `<p style="color:var(--text-muted);font-size:0.85rem">${t('panel.no_crew_ratings')}</p>`;
 
   document.getElementById('panel-content').innerHTML = `
     <div class="panel-header">
@@ -892,52 +852,52 @@ function renderPanel(artist) {
     <div>${scBtn}</div>
 
     <div class="rating-section">
-      <label>Meine Bewertung</label>
+      <label>${t('panel.my_rating')}</label>
       <div class="stars-input" id="stars-input">
         ${[1,2,3,4,5].map(i =>
-          `<button class="star-btn ${i <= currentRating ? 'filled' : ''}" data-star="${i}" aria-label="${i} Stern${i>1?'e':''}">★</button>`
+          `<button class="star-btn ${i <= currentRating ? 'filled' : ''}" data-star="${i}" aria-label="${i} star${i>1?'s':''}">★</button>`
         ).join('')}
       </div>
     </div>
 
     <div class="toggle-section">
-      <div class="toggle-context-label">Vor dem Festival</div>
+      <div class="toggle-context-label">${t('panel.before_festival')}</div>
       <div class="toggle-row">
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-listened" ${currentListened ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
-        <span class="toggle-label">Reingehört</span>
+        <span class="toggle-label">${t('panel.listened')}</span>
       </div>
       <div class="toggle-row">
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-favorite" ${currentFavorite ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
-        <span class="toggle-label">Favorit — will ich sehen ♥</span>
+        <span class="toggle-label">${t('panel.favorite')}</span>
       </div>
     </div>
 
     <div class="toggle-section on-festival">
-      <div class="toggle-context-label festival">Auf dem Festival</div>
+      <div class="toggle-context-label festival">${t('panel.on_festival')}</div>
       <div class="toggle-row">
         <label class="toggle-switch">
           <input type="checkbox" id="toggle-seen" ${currentSeen ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
-        <span class="toggle-label">Gesehen ✓</span>
+        <span class="toggle-label">${t('panel.seen')}</span>
       </div>
     </div>
 
     <div class="comment-section">
-      <label>Kommentar</label>
+      <label>${t('panel.comment')}</label>
       <textarea class="comment-textarea" id="comment-input" placeholder="${escHtml(commentPlaceholder)}">${escHtml(currentComment)}</textarea>
     </div>
 
-    <button class="btn-save" id="btn-save">Speichern</button>
+    <button class="btn-save" id="btn-save">${t('panel.save')}</button>
 
     <div>
-      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:0.75rem">Crew</div>
+      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:0.75rem">${t('panel.crew')}</div>
       <div class="crew-ratings">${crewHtml}</div>
     </div>
   `;
@@ -956,7 +916,7 @@ function renderPanel(artist) {
   document.getElementById('btn-save')?.addEventListener('click', async () => {
     const btn = document.getElementById('btn-save');
     btn.disabled = true;
-    btn.textContent = 'Speichern...';
+    btn.textContent = t('panel.saving');
 
     const data = {
       userId:      state.user.uid,
@@ -981,10 +941,10 @@ function renderPanel(artist) {
         if (idx >= 0) cached[idx] = entry; else cached.push(entry);
         state.ratings = cached;
         cacheRatings(cached);
-        showToast('Offline gespeichert — wird synchronisiert wenn du wieder online bist', 'success');
+        showToast(t('toast.offline_saved'), 'success');
       }
 
-      btn.textContent = 'Gespeichert ✓';
+      btn.textContent = t('panel.saved');
       btn.classList.add('saved');
 
       // 80er-Quote als Toast je nach Rating
@@ -997,7 +957,7 @@ function renderPanel(artist) {
       console.error(err);
       btn.disabled = false;
       btn.textContent = 'Speichern';
-      showToast('Fehler beim Speichern', 'error');
+      showToast(t('toast.save_error'), 'error');
     }
   });
 }
@@ -1058,8 +1018,8 @@ function openProfileModal() {
     : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
 
   const passphraseStatus = hasOfflineHash()
-    ? `<span style="color:var(--success);font-size:0.8rem">✓ Offline-Passphrase eingerichtet</span>`
-    : `<span style="color:var(--warning);font-size:0.8rem">⚠ Noch keine Offline-Passphrase</span>`;
+    ? `<span style="color:var(--success);font-size:0.8rem">${t('profile.passphrase_ok')}</span>`
+    : `<span style="color:var(--warning);font-size:0.8rem">${t('profile.passphrase_missing')}</span>`;
 
   const activeFestival = state.festivals.find(f => f.id === state.activeFestivalId);
 
@@ -1076,15 +1036,15 @@ function openProfileModal() {
         <div class="profile-festival-name">${escHtml(activeFestival?.name || state.activeFestivalId)}</div>
         <div style="font-size:0.75rem;color:var(--text-muted)">${escHtml(activeFestival?.location || '')}</div>
       </div>
-      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">Wechseln</button>
+      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">${t('profile.switch')}</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
       ${passphraseStatus}
       <button id="btn-change-passphrase" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem">
-        ${hasOfflineHash() ? 'Ändern' : 'Einrichten'}
+        ${hasOfflineHash() ? t('profile.passphrase_change') : t('profile.passphrase_setup')}
       </button>
     </div>
-    <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
+    <button class="btn-logout-modal" id="btn-logout-modal">${t('profile.logout')}</button>
   `;
 
   $('btn-switch-festival')?.addEventListener('click', openFestivalPanel);
@@ -1112,4 +1072,22 @@ function closeProfileModal() {
 
 profileBackdrop?.addEventListener('click', closeProfileModal);
 
+// ── Update-Toast (SW-Update) ──
+
+function showUpdateToast() {
+  const existing = document.getElementById('update-toast');
+  if (existing) return;
+
+  const toast = document.createElement('div');
+  toast.id = 'update-toast';
+  toast.className = 'toast update-toast show';
+  toast.innerHTML = `<span>${t('sw.update_toast')}</span><button class="toast-reload-btn" id="btn-reload-update">${t('sw.update_reload')}</button>`;
+  document.body.appendChild(toast);
+  document.getElementById('btn-reload-update')?.addEventListener('click', () => window.location.reload());
+}
+
+// ── Init ──
+
+applyTranslations();
+setupLangToggle();
 render();

@@ -19,11 +19,16 @@
     <nav class="nav">
       <a href="./index.html" class="nav-logo">H<span>D</span></a>
       <div class="nav-links">
-        <a href="./index.html"     class="nav-link">Artists</a>
-        <a href="./timetable.html" class="nav-link">Timetable</a>
-        <a href="./crew.html"      class="nav-link">Crew</a>
-        <a href="./help.html"      class="nav-link active">Hilfe</a>
-        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+        <a href="./index.html"     class="nav-link" data-i18n="nav.artists">Artists</a>
+        <a href="./timetable.html" class="nav-link" data-i18n="nav.timetable">Timetable</a>
+        <a href="./crew.html"      class="nav-link" data-i18n="nav.crew">Crew</a>
+        <a href="./help.html"      class="nav-link active" data-i18n="nav.help">Hilfe</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none" data-i18n="nav.admin">Admin</a>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-toggle-btn active" data-lang="de">DE</button>
+        <span class="lang-toggle-sep">|</span>
+        <button class="lang-toggle-btn" data-lang="en">EN</button>
       </div>
       <div class="nav-avatar" id="nav-avatar" style="display:none">
         <img id="nav-avatar-img" src="" alt="Avatar">
@@ -31,38 +36,65 @@
     </nav>
 
     <main class="main faq-main">
-      <h1 class="page-title">Hilfe & FAQ</h1>
+      <h1 class="page-title" data-i18n="help.title">Hilfe & FAQ</h1>
+
+      <!-- ── App-Beschreibung ── -->
+      <div class="app-hero">
+        <div class="app-hero-title" id="hero-title" data-i18n="help.hero_title">Was ist HEARD?</div>
+        <p class="app-hero-desc" id="hero-desc-de">
+          HEARD ist ein Festival-Companion: Lineup entdecken, Künstler bewerten, persönlichen Timetable erstellen und mit der Crew vergleichen.
+        </p>
+        <p class="app-hero-desc" id="hero-desc-en" style="display:none">
+          HEARD is a festival companion: discover the lineup, rate artists, build your personal timetable, and compare with your crew.
+        </p>
+        <ul class="app-hero-features" id="hero-features-de">
+          <li>Artist-Browse mit eingebetteten SoundCloud-Links</li>
+          <li>1–5-Sterne-Bewertungen + Kommentare + Favoriten</li>
+          <li>Persönlicher Timetable mit automatischer Konflikt-Erkennung</li>
+          <li>Crew-System: gemeinsame Favoriten + Ähnlichkeitsscore (Jaccard)</li>
+          <li>100 % offline-fähig (PWA) — funktioniert ohne WLAN auf dem Festival</li>
+          <li>Unterstützt MODEM 2026, MOYN 2026 und weitere Festivals</li>
+        </ul>
+        <ul class="app-hero-features" id="hero-features-en" style="display:none">
+          <li>Artist browse with embedded SoundCloud links</li>
+          <li>1–5 star ratings + comments + favorites</li>
+          <li>Personal timetable with automatic conflict detection</li>
+          <li>Crew system: shared favorites + similarity score (Jaccard)</li>
+          <li>100% offline-capable (PWA) — works without WiFi at the festival</li>
+          <li>Supports MODEM 2026, MOYN 2026, and more festivals</li>
+        </ul>
+      </div>
 
       <!-- ── Festival & Admin ── -->
       <section class="faq-section">
-        <h2 class="faq-section-title">Festival & Admin</h2>
+        <h2 class="faq-section-title" data-i18n="help.section_festival">Festival & Admin</h2>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie wechsle ich das aktive Festival?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q1-de">Wie wechsle ich das aktive Festival?</summary>
+          <div class="faq-answer" id="faq-a1-de">
             <p>Tippe oben rechts auf deinen <strong>Avatar</strong> → Profil-Overlay öffnet sich → Button <strong>„Wechseln"</strong> → Festival-Liste erscheint → gewünschtes Festival antippen.</p>
             <p>Das aktive Festival gilt für Artists, Timetable und Crew gleichzeitig.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie lege ich ein neues Festival an?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q2-de">Wie lege ich ein neues Festival an?</summary>
+          <div class="faq-answer" id="faq-a2-de">
             <p>Gleicher Weg wie „Festival wechseln": Avatar → Profil → „Wechseln" → ganz unten <strong>„+ Neues Festival anlegen"</strong>.</p>
             <p>Wähle eine Vorlage (z.&nbsp;B. MOYN, MODEM, Fusion …) – Name, Ort und Stages werden automatisch vorausgefüllt. Du kannst alles anpassen.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie bearbeite ich ein bestehendes Festival (Name, Ort, Artists)?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q3-de">Wie bearbeite ich ein bestehendes Festival (Name, Ort, Artists)?</summary>
+          <div class="faq-answer" id="faq-a3-de">
             <p>Das geht nur als <strong>Admin</strong>: In der Navigation erscheint für Admins der Link <strong>„Admin"</strong>. Dort kannst du Festival-Name und Ort ändern, Artists hinzufügen, bearbeiten oder löschen und JSON-Importe vom Scraper einspielen.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie werde ich Admin?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q4-de">Wie werde ich Admin?</summary>
+          <div class="faq-answer" id="faq-a4-de">
             <p>Admin-Rechte müssen manuell in der <strong>Firebase/Firestore Console</strong> vergeben werden. Dazu muss im Dokument <code>users/{deine-uid}</code> das Feld <code>role</code> auf <code>"admin"</code> gesetzt werden. Das kann nur jemand tun, der bereits Zugriff auf das Firebase-Projekt hat.</p>
           </div>
         </details>
@@ -70,26 +102,26 @@
 
       <!-- ── Crew ── -->
       <section class="faq-section">
-        <h2 class="faq-section-title">Crew</h2>
+        <h2 class="faq-section-title" data-i18n="help.section_crew">Crew</h2>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie erstelle ich eine Crew?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q5-de">Wie erstelle ich eine Crew?</summary>
+          <div class="faq-answer" id="faq-a5-de">
             <p>Gehe zu <a href="./crew.html">Crew</a> → Bereich <strong>„Neue Crew erstellen"</strong> → Crew-Namen eingeben → <strong>„Crew erstellen"</strong> klicken.</p>
             <p>Du bekommst einen dauerhaften Einladungs-Code, den du mit Freunden teilen kannst.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie trete ich einer bestehenden Crew bei?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q6-de">Wie trete ich einer bestehenden Crew bei?</summary>
+          <div class="faq-answer" id="faq-a6-de">
             <p>Gehe zu <a href="./crew.html">Crew</a> → Bereich <strong>„Crew beitreten"</strong> → 6-stelligen Code eingeben, den du von einem Crew-Mitglied erhalten hast → <strong>„Beitreten"</strong> klicken.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Was zeigt die Crew-Ansicht?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q7-de">Was zeigt die Crew-Ansicht?</summary>
+          <div class="faq-answer" id="faq-a7-de">
             <p>Die Crew-Seite vergleicht eure Bewertungen und zeigt:</p>
             <ul>
               <li><strong>Gemeinsame Favoriten</strong> – Artists, die alle Mitglieder mit ≥&nbsp;4 Sternen bewertet haben.</li>
@@ -103,11 +135,11 @@
 
       <!-- ── Nutzung & Features ── -->
       <section class="faq-section">
-        <h2 class="faq-section-title">Nutzung & Features</h2>
+        <h2 class="faq-section-title" data-i18n="help.section_features">Nutzung & Features</h2>
 
         <details class="faq-item">
-          <summary class="faq-question">Was ist der Offline-Login / die Passphrase?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q8-de">Was ist der Offline-Login / die Passphrase?</summary>
+          <div class="faq-answer" id="faq-a8-de">
             <p>HEARD funktioniert auch ohne Internet. Damit du dich offline anmelden kannst, wird beim ersten Login eine <strong>Passphrase</strong> vorgeschlagen (basierend auf deinen Top-Favoriten). Diese wird lokal gespeichert.</p>
             <p>Auf dem Festival: WLAN-los → HEARD öffnen → Passphrase eingeben → fertig.</p>
             <p><strong>Passphrase vergessen?</strong> Kurz ins WLAN → Google-Login → Avatar → Profil → neue Passphrase setzen.</p>
@@ -115,24 +147,24 @@
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Wie bewerte ich einen Artist?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q9-de">Wie bewerte ich einen Artist?</summary>
+          <div class="faq-answer" id="faq-a9-de">
             <p>Auf der <a href="./index.html">Artists-Seite</a> einen Artist antippen → Detail-Panel öffnet sich → Sterne vergeben (1–5), Kommentar schreiben, „Reingehört" oder „Will ich sehen" markieren.</p>
             <p>Alle Änderungen werden sofort in Firestore gespeichert – auch offline (Sync beim nächsten Online-Moment).</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Was zeigt der persönliche Timetable?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q10-de">Was zeigt der persönliche Timetable?</summary>
+          <div class="faq-answer" id="faq-a10-de">
             <p>Der <a href="./timetable.html">Timetable</a> listet alle Artists, die du mit <strong>4 oder 5 Sternen</strong> bewertet hast <em>und</em> für die eine Spielzeit eingetragen ist.</p>
             <p>Er erkennt automatisch <strong>Überschneidungen</strong> (zwei Favoriten gleichzeitig auf verschiedenen Stages) und hebt diese farblich hervor.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-question">Kann ich HEARD als App auf meinem Handy installieren?</summary>
-          <div class="faq-answer">
+          <summary class="faq-question" id="faq-q11-de">Kann ich HEARD als App auf meinem Handy installieren?</summary>
+          <div class="faq-answer" id="faq-a11-de">
             <p>Ja – HEARD ist eine <strong>Progressive Web App (PWA)</strong>.</p>
             <ul>
               <li><strong>iPhone/iPad:</strong> Safari → Teilen-Symbol → „Zum Home-Bildschirm" hinzufügen.</li>
@@ -146,5 +178,6 @@
     </main>
   </div>
 
+  <script type="module" src="./js/help.js"></script>
 </body>
 </html>

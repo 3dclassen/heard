@@ -15,11 +15,16 @@
     <nav class="nav">
       <a href="./index.html" class="nav-logo">H<span>D</span></a>
       <div class="nav-links">
-        <a href="./index.html"     class="nav-link">Artists</a>
-        <a href="./timetable.html" class="nav-link">Timetable</a>
-        <a href="./crew.html"      class="nav-link">Crew</a>
-        <a href="./help.html"      class="nav-link">Hilfe</a>
-        <a href="./admin.html"     class="nav-link active">Admin</a>
+        <a href="./index.html"     class="nav-link" data-i18n="nav.artists">Artists</a>
+        <a href="./timetable.html" class="nav-link" data-i18n="nav.timetable">Timetable</a>
+        <a href="./crew.html"      class="nav-link" data-i18n="nav.crew">Crew</a>
+        <a href="./help.html"      class="nav-link" data-i18n="nav.help">Hilfe</a>
+        <a href="./admin.html"     class="nav-link active" data-i18n="nav.admin">Admin</a>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-toggle-btn active" data-lang="de">DE</button>
+        <span class="lang-toggle-sep">|</span>
+        <button class="lang-toggle-btn" data-lang="en">EN</button>
       </div>
       <div class="nav-avatar" id="nav-avatar">
         <img id="nav-avatar-img" src="" alt="Avatar">
@@ -27,12 +32,12 @@
     </nav>
 
     <main class="main">
-      <h1 class="page-title">Admin-Bereich</h1>
+      <h1 class="page-title" data-i18n="admin.title">Admin-Bereich</h1>
 
       <!-- ── Festival ── -->
       <div class="admin-section">
-        <div class="admin-section-title">Festival</div>
-        <p id="festival-info" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem">Lade...</p>
+        <div class="admin-section-title" data-i18n="admin.festival_section">Festival</div>
+        <p id="festival-info" style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem" data-i18n="admin.loading">Lade...</p>
         <div class="input-group">
           <label>Festival-Name</label>
           <input type="text" id="input-festival-name" class="text-input" placeholder="MODEM 2026" value="MODEM 2026">
@@ -41,7 +46,7 @@
           <label>Ort</label>
           <input type="text" id="input-festival-location" class="text-input" placeholder="Kroatien" value="Kroatien">
         </div>
-        <button class="btn-primary" id="btn-save-festival">Festival speichern / anlegen</button>
+        <button class="btn-primary" id="btn-save-festival" data-i18n="admin.save_festival">Festival speichern / anlegen</button>
         <p style="color:var(--text-muted);font-size:0.75rem;margin-top:0.5rem">
           Festival-ID ist fest auf <code style="background:var(--bg-surface);padding:0.1rem 0.3rem;border-radius:3px">modem-2026</code> gesetzt.
         </p>
@@ -49,7 +54,7 @@
 
       <!-- ── Artists ── -->
       <div class="admin-section">
-        <div class="admin-section-title">Artists <span id="artist-count-admin" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+        <div class="admin-section-title"><span data-i18n="admin.artists_section">Artists</span> <span id="artist-count-admin" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
 
         <!-- Manuell hinzufügen -->
         <form id="form-add-artist" style="margin-bottom:1.25rem">
@@ -70,16 +75,16 @@
             <label>SoundCloud URL (optional)</label>
             <input type="url" id="input-artist-sc" class="text-input" placeholder="https://soundcloud.com/...">
           </div>
-          <button type="submit" class="btn-primary">Artist hinzufügen</button>
+          <button type="submit" class="btn-primary" data-i18n="admin.add_artist_btn">Artist hinzufügen</button>
         </form>
 
         <!-- JSON-Import (vom Scraper) -->
         <div style="margin-bottom:1.25rem">
-          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem" data-i18n="admin.json_hint">
             JSON-Import (Ausgabe des Scrapers einfügen):
           </p>
           <textarea id="json-import-input" class="comment-textarea" style="min-height:100px;font-family:monospace;font-size:0.75rem" placeholder='[{"name":"GRUB","stage":"hive","soundcloud_url":"https://..."}]'></textarea>
-          <button class="btn-primary" id="btn-import-json" style="margin-top:0.5rem">JSON importieren</button>
+          <button class="btn-primary" id="btn-import-json" style="margin-top:0.5rem" data-i18n="admin.json_import">JSON importieren</button>
         </div>
 
         <!-- Artist-Tabelle -->
@@ -87,15 +92,15 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th data-i18n="admin.col_name">Name</th>
                 <th>Stage</th>
-                <th>SoundCloud</th>
-                <th>Zeit</th>
+                <th data-i18n="admin.col_sc">SoundCloud</th>
+                <th data-i18n="admin.col_time">Zeit</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="artist-table-body">
-              <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Lade...</td></tr>
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted)" data-i18n="admin.loading">Lade...</td></tr>
             </tbody>
           </table>
         </div>
@@ -103,18 +108,18 @@
 
       <!-- ── User ── -->
       <div class="admin-section">
-        <div class="admin-section-title">Nutzer*innen</div>
+        <div class="admin-section-title" data-i18n="admin.users_section">Nutzer*innen</div>
         <div style="overflow-x:auto">
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>E-Mail</th>
-                <th>Rolle</th>
+                <th data-i18n="admin.col_name">Name</th>
+                <th data-i18n="admin.col_email">E-Mail</th>
+                <th data-i18n="admin.col_role">Rolle</th>
               </tr>
             </thead>
             <tbody id="user-table-body">
-              <tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Lade...</td></tr>
+              <tr><td colspan="3" style="text-align:center;color:var(--text-muted)" data-i18n="admin.loading">Lade...</td></tr>
             </tbody>
           </table>
         </div>

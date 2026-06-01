@@ -6,14 +6,15 @@ import {
 } from './firebase.js';
 import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
 import { myFavorites, sharedFavorites, getMyRating } from './rating.js';
+import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 const DAY_ORDER = ['wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = {
-  wednesday: 'Mi',
-  thursday:  'Do',
-  friday:    'Fr',
-  saturday:  'Sa',
-  sunday:    'So'
+  wednesday: 'Mi / Wed',
+  thursday:  'Do / Thu',
+  friday:    'Fr / Fri',
+  saturday:  'Sa / Sat',
+  sunday:    'So / Sun'
 };
 
 let state = {
@@ -46,6 +47,8 @@ function setupNav() {
   const img = $('nav-avatar-img');
   if (img && state.user?.photoURL) img.src = state.user.photoURL;
   $('btn-logout')?.addEventListener('click', logout);
+  applyTranslations();
+  setupLangToggle();
 }
 
 function startListeners() {
@@ -93,14 +96,14 @@ function renderFavoritesList(favorites) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📋</div>
-        <p>Noch keine Favoriten — geh zurück zur Artist-Liste und bewerte ein paar Acts!</p>
+        <p>${t('timetable.no_favorites')}</p>
       </div>`;
     return;
   }
 
   container.innerHTML = `
     <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">
-      Timetable (Zeiten) noch nicht verfügbar. Hier sind deine Favoriten:
+      ${t('timetable.no_times')}
     </p>
     <div class="artist-list">
       ${favorites.map(a => {
@@ -154,7 +157,7 @@ function renderTimetableView(favorites) {
   const conflicts = findConflicts(dayArtists);
 
   const slotsHtml = dayArtists.length === 0
-    ? '<p style="color:var(--text-muted);padding:1rem 0">Keine Favoriten an diesem Tag.</p>'
+    ? `<p style="color:var(--text-muted);padding:1rem 0">${t('timetable.no_day')}</p>`
     : dayArtists.map(a => {
         const isConflict = conflicts.has(a.id);
         const r = getMyRating(state.ratings, state.user.uid, a.id);
@@ -162,7 +165,7 @@ function renderTimetableView(favorites) {
           <div class="timetable-slot ${isConflict ? 'conflict' : ''}">
             <div class="slot-time">
               ${formatTime(a.time_start)} – ${formatTime(a.time_end)}
-              ${isConflict ? '<span class="conflict-badge">Zeitkonflikt ⚡</span>' : ''}
+              ${isConflict ? `<span class="conflict-badge">${t('timetable.conflict')}</span>` : ''}
             </div>
             <div style="display:flex;align-items:center;gap:0.5rem">
               <span class="slot-artist">${escHtml(a.name)}</span>
@@ -222,3 +225,6 @@ function escHtml(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+applyTranslations();
+setupLangToggle();

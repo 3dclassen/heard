@@ -20,11 +20,16 @@
     <nav class="nav">
       <a href="./index.html" class="nav-logo">H<span>D</span></a>
       <div class="nav-links">
-        <a href="./index.html"     class="nav-link">Artists</a>
-        <a href="./timetable.html" class="nav-link active">Timetable</a>
-        <a href="./crew.html"      class="nav-link">Crew</a>
-        <a href="./help.html"      class="nav-link">Hilfe</a>
-        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+        <a href="./index.html"     class="nav-link" data-i18n="nav.artists">Artists</a>
+        <a href="./timetable.html" class="nav-link active" data-i18n="nav.timetable">Timetable</a>
+        <a href="./crew.html"      class="nav-link" data-i18n="nav.crew">Crew</a>
+        <a href="./help.html"      class="nav-link" data-i18n="nav.help">Hilfe</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none" data-i18n="nav.admin">Admin</a>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-toggle-btn active" data-lang="de">DE</button>
+        <span class="lang-toggle-sep">|</span>
+        <button class="lang-toggle-btn" data-lang="en">EN</button>
       </div>
       <div class="nav-avatar" id="nav-avatar">
         <img id="nav-avatar-img" src="" alt="Avatar">
@@ -32,9 +37,9 @@
     </nav>
 
     <main class="main">
-      <h1 class="page-title">Mein Timetable</h1>
+      <h1 class="page-title" data-i18n="timetable.title">Mein Timetable</h1>
       <div id="timetable-content">
-        <div class="loader"><div class="spinner"></div> Lade...</div>
+        <div class="loader"><div class="spinner"></div> <span data-i18n="loading.generic">Lade...</span></div>
       </div>
     </main>
 

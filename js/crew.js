@@ -11,6 +11,7 @@ import {
 import { isOnline } from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
 import { hasOfflineHash } from './offline-auth.js';
+import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 let state = {
   user:             null,
@@ -79,6 +80,9 @@ function setupNav() {
     const adminLink = $('nav-admin');
     if (adminLink) adminLink.style.display = '';
   }
+
+  applyTranslations();
+  setupLangToggle();
 }
 
 // ── Crew-Name bearbeiten ──
@@ -117,11 +121,11 @@ $('crew-name-input')?.addEventListener('keydown', e => {
 $('btn-create-crew')?.addEventListener('click', async () => {
   const input = $('crew-create-name-input');
   const name  = input?.value.trim();
-  if (!name) { setFeedback('Bitte einen Crew-Namen eingeben.', 'error'); return; }
+  if (!name) { setFeedback(t('crew.name_required'), 'error'); return; }
 
   const btn = $('btn-create-crew');
   btn.disabled    = true;
-  btn.textContent = 'Erstelle...';
+  btn.textContent = t('crew.creating');
 
   try {
     await createCrew(state.user.uid, name);
@@ -130,14 +134,14 @@ $('btn-create-crew')?.addEventListener('click', async () => {
   } catch (err) {
     setFeedback(
       err.message === 'ALREADY_IN_CREW'
-        ? 'Du bist bereits in einer Crew für dieses Festival.'
-        : 'Fehler — bitte nochmal versuchen.',
+        ? t('crew.already_in_crew')
+        : t('crew.error'),
       'error'
     );
   }
 
   btn.disabled    = false;
-  btn.textContent = 'Crew erstellen';
+  btn.textContent = t('crew.create_btn');
 });
 
 $('crew-create-name-input')?.addEventListener('keydown', e => {
@@ -150,11 +154,11 @@ $('btn-accept-code')?.addEventListener('click', async () => {
   const input = $('invite-input');
   const code  = input?.value?.trim();
 
-  if (!code) { setFeedback('Bitte einen Code eingeben.', 'error'); return; }
+  if (!code) { setFeedback(t('crew.code_required'), 'error'); return; }
 
   const btn = $('btn-accept-code');
   btn.disabled    = true;
-  btn.textContent = 'Verbinde...';
+  btn.textContent = t('crew.joining');
 
   try {
     await joinCrewByCode(code, state.user.uid);
@@ -162,17 +166,17 @@ $('btn-accept-code')?.addEventListener('click', async () => {
     setFeedback('', '');
   } catch (err) {
     const messages = {
-      CODE_NOT_FOUND:  'Code nicht gefunden. Bitte prüfen.',
-      CODE_OWN:        'Das ist dein eigener Code — schick ihn an andere.',
-      CODE_USED:       'Dieser Code wurde bereits verwendet.',
-      ALREADY_MEMBER:  'Du bist bereits in dieser Crew.',
-      ALREADY_IN_CREW: 'Du bist bereits in einer Crew. Verlasse erst deine aktuelle Crew.'
+      CODE_NOT_FOUND:  t('crew.code_not_found'),
+      CODE_OWN:        t('crew.code_own'),
+      CODE_USED:       t('crew.code_used'),
+      ALREADY_MEMBER:  t('crew.already_member'),
+      ALREADY_IN_CREW: t('crew.already_in_another')
     };
-    setFeedback(messages[err.message] || 'Fehler — bitte nochmal versuchen.', 'error');
+    setFeedback(messages[err.message] || t('crew.error'), 'error');
   }
 
   btn.disabled    = false;
-  btn.textContent = 'Beitreten';
+  btn.textContent = t('crew.join_btn');
 });
 
 $('invite-input')?.addEventListener('keydown', e => {
@@ -190,18 +194,18 @@ function setFeedback(msg, type) {
 
 $('btn-leave-crew')?.addEventListener('click', async () => {
   if (!state.crew) return;
-  if (!confirm(`Crew "${state.crew.name}" wirklich verlassen?`)) return;
+  if (!confirm(`${state.crew.name} — ${t('crew.leave_confirm')}`)) return;
 
   const btn = $('btn-leave-crew');
   btn.disabled    = true;
-  btn.textContent = 'Verlasse...';
+  btn.textContent = t('crew.leaving');
 
   try {
     await leaveCrew(state.crew.id, state.user.uid);
   } catch (err) {
     console.error('[crew] leaveCrew Fehler:', err);
     btn.disabled    = false;
-    btn.textContent = 'Crew verlassen';
+    btn.textContent = t('crew.leave');
   }
 });
 
@@ -212,10 +216,10 @@ $('btn-copy-code')?.addEventListener('click', () => {
   if (!code) return;
   navigator.clipboard.writeText(code).then(() => {
     const btn = $('btn-copy-code');
-    btn.textContent = 'Kopiert ✓';
+    btn.textContent = t('crew.copied');
     btn.classList.add('copied');
     setTimeout(() => {
-      btn.textContent = 'Kopieren';
+      btn.textContent = t('crew.copy');
       btn.classList.remove('copied');
     }, 2000);
   });
@@ -225,7 +229,7 @@ $('btn-copy-code')?.addEventListener('click', () => {
 
 $('btn-regen-code')?.addEventListener('click', async () => {
   if (!state.crew || !isAdmin()) return;
-  if (!confirm('Neuen Code generieren? Der alte Code funktioniert dann nicht mehr.')) return;
+  if (!confirm(t('crew.regen_confirm'))) return;
 
   const btn = $('btn-regen-code');
   btn.disabled = true;
@@ -309,7 +313,7 @@ function renderCrewHeader() {
   if (ctxEl) {
     const f = state.festivals.find(f => f.id === state.activeFestivalId);
     const name = f?.name || state.activeFestivalId;
-    ctxEl.textContent = `${name} · Crew wechseln = Festival wechseln (Profil oben rechts)`;
+    ctxEl.textContent = `${name} · ${t('crew.context_hint')}`;
   }
 }
 
@@ -336,9 +340,9 @@ function renderCrewMembers() {
         ${u.photo_url
           ? `<img class="crew-member-avatar" src="${esc(u.photo_url)}" alt="">`
           : `<div class="crew-member-avatar initials">${esc(ini)}</div>`}
-        <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}${isSelf ? ' (Du)' : ''}${isCrewAdmin ? ' ★' : ''}</div>
-        <div class="crew-member-stats">${prog.rated}/${prog.total} bewertet</div>
-        <div class="crew-member-stats">${prog.heard} reingehört</div>
+        <div class="crew-member-name">${esc(u.display_name?.split(' ')[0] || '?')}${isSelf ? ` (${t('crew.self')})` : ''}${isCrewAdmin ? ' ★' : ''}</div>
+        <div class="crew-member-stats">${prog.rated}/${prog.total} ${t('crew.rated')}</div>
+        <div class="crew-member-stats">${prog.heard} ${t('crew.heard')}</div>
       </div>`;
   }).join('');
 
@@ -363,18 +367,18 @@ function renderMemberFilterBanner() {
   if (!state.filterMember) {
     el.style.display = 'none';
     const title = $('crew-list-title');
-    if (title) title.textContent = 'Crew-Bewertungen';
+    if (title) title.textContent = t('crew.ratings_title');
     return;
   }
   const u    = state.users.find(u => u.uid === state.filterMember);
   const name = u?.display_name?.split(' ')[0] || '?';
   el.style.display = 'flex';
   el.innerHTML = `
-    <span>Ansicht: <strong>${esc(name)}'s Bewertungen</strong></span>
-    <button class="member-filter-close" title="Zurück zur Crew-Ansicht">✕</button>
+    <span>${t('crew.filter_view')} <strong>${esc(name)}'s</strong></span>
+    <button class="member-filter-close" title="${esc(t('crew.filter_back'))}">✕</button>
   `;
   const title = $('crew-list-title');
-  if (title) title.textContent = `${name}'s Bewertungen`;
+  if (title) title.textContent = `${name}'s`;
   el.querySelector('.member-filter-close').onclick = () => {
     state.filterMember = null;
     render();
@@ -418,11 +422,11 @@ function jaccardScore(myIds, otherIds, ratings) {
 function scoreQuote(score) {
   const pct = Math.round(score * 100);
   let quote;
-  if (score <= 0.20)      quote = 'Das reicht für einen Händedruck, MacGyver.';
-  else if (score <= 0.40) quote = 'Ähnlich wie Knight Rider und ein normales Auto.';
-  else if (score <= 0.60) quote = '1.21 Gigawatt Potenzial.';
-  else if (score <= 0.80) quote = 'Ich liebe es wenn ein Plan funktioniert.';
-  else                    quote = 'TURBO BOOST. Das ist euer Match.';
+  if (score <= 0.20)      quote = t('crew.score_q1');
+  else if (score <= 0.40) quote = t('crew.score_q2');
+  else if (score <= 0.60) quote = t('crew.score_q3');
+  else if (score <= 0.80) quote = t('crew.score_q4');
+  else                    quote = t('crew.score_q5');
   return { quote, pct };
 }
 
@@ -437,7 +441,7 @@ function renderCrewMatch() {
   if (otherCrews.length === 0) {
     el.innerHTML = `
       <div class="empty-state" style="padding:1rem 0">
-        <p style="color:var(--text-dim);font-size:0.85rem">Noch keine anderen Crews beim Festival — kommt bald! 🎪</p>
+        <p style="color:var(--text-dim);font-size:0.85rem">${t('crew.no_other_crews')}</p>
       </div>`;
     section.style.display = '';
     return;
@@ -452,11 +456,13 @@ function renderCrewMatch() {
 
   el.innerHTML = scored.map(({ crew, score }) => {
     const { quote, pct } = scoreQuote(score);
+    const n = (crew.members || []).length;
+    const memberLabel = n !== 1 ? t('crew.members') : t('crew.member');
     return `
       <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;gap:0.4rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span class="artist-name">${esc(crew.name || 'Unbekannte Crew')}</span>
-          <span style="font-size:0.75rem;color:var(--text-dim)">${(crew.members || []).length} Mitglied${(crew.members || []).length !== 1 ? 'er' : ''}</span>
+          <span style="font-size:0.75rem;color:var(--text-dim)">${n} ${memberLabel}</span>
         </div>
         <div style="font-size:0.82rem;color:var(--text-muted);font-style:italic">
           „${esc(quote)}" <span style="color:var(--accent-light);font-style:normal;font-weight:600">(${pct}%)</span>
@@ -472,7 +478,7 @@ function renderCrewArtistList() {
   if (!el) return;
 
   if (state.artists.length === 0) {
-    el.innerHTML = '<div class="loader"><div class="spinner"></div> Lade...</div>';
+    el.innerHTML = `<div class="loader"><div class="spinner"></div> ${t('crew.loading')}</div>`;
     return;
   }
 
@@ -497,7 +503,7 @@ function renderCrewArtistList() {
     el.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">🎵</div>
-        <p>Noch keine Bewertungen. Geh zur Artist-Liste und bewerte ein paar Acts!</p>
+        <p>${t('crew.no_ratings')}</p>
       </div>`;
     return;
   }
@@ -540,7 +546,7 @@ function renderCrewArtistList() {
   }).join('');
 
   if (!el.innerHTML.trim()) {
-    el.innerHTML = `<div class="empty-state"><p>Noch keine Crew-Bewertungen vorhanden.</p></div>`;
+    el.innerHTML = `<div class="empty-state"><p>${t('crew.no_crew_ratings')}</p></div>`;
   }
 }
 
@@ -579,7 +585,7 @@ $('nav-festival')?.addEventListener('click', openFestivalPanel);
 function renderFestivalList() {
   $('festival-content').innerHTML = `
     <div class="panel-header" style="margin-bottom:1rem">
-      <div class="panel-artist-name" style="font-size:1.1rem">Festival wechseln</div>
+      <div class="panel-artist-name" style="font-size:1.1rem">${t('festival.switch_title')}</div>
     </div>
     <div class="festival-list">
       ${state.festivals.map(f => `
@@ -629,8 +635,8 @@ function openProfileModal() {
     : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
 
   const passphraseStatus = hasOfflineHash()
-    ? `<span style="color:var(--success);font-size:0.8rem">✓ Offline-Passphrase eingerichtet</span>`
-    : `<span style="color:var(--warning);font-size:0.8rem">⚠ Noch keine Passphrase – auf der Artists-Seite einrichten</span>`;
+    ? `<span style="color:var(--success);font-size:0.8rem">${t('profile.passphrase_ok')}</span>`
+    : `<span style="color:var(--warning);font-size:0.8rem">${t('crew.passphrase_missing_crew')}</span>`;
 
   const activeFestival = state.festivals.find(f => f.id === state.activeFestivalId);
 
@@ -647,12 +653,12 @@ function openProfileModal() {
         <div class="profile-festival-name">${esc(activeFestival?.name || state.activeFestivalId)}</div>
         <div style="font-size:0.75rem;color:var(--text-muted)">${esc(activeFestival?.location || '')}</div>
       </div>
-      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">Wechseln</button>
+      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">${t('profile.switch')}</button>
     </div>
     <div style="padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
       ${passphraseStatus}
     </div>
-    <button class="btn-logout-modal" id="btn-logout-modal">Ausloggen</button>
+    <button class="btn-logout-modal" id="btn-logout-modal">${t('profile.logout')}</button>
   `;
 
   $('btn-switch-festival')?.addEventListener('click', () => {
@@ -696,3 +702,6 @@ function esc(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+applyTranslations();
+setupLangToggle();

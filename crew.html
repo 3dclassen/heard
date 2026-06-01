@@ -20,11 +20,16 @@
         <a href="./index.html" class="nav-logo">H<span>D</span></a>
         <button id="nav-festival" class="nav-festival" style="display:none"></button>
         <div class="nav-links">
-          <a href="./index.html" class="nav-link">Artists</a>
-          <a href="./timetable.html" class="nav-link">Timetable</a>
-          <a href="./crew.html" class="nav-link active">Crew</a>
-          <a href="./help.html"  class="nav-link">Hilfe</a>
-          <a href="./admin.html" class="nav-link" id="nav-admin" style="display:none">Admin</a>
+          <a href="./index.html"     class="nav-link" data-i18n="nav.artists">Artists</a>
+          <a href="./timetable.html" class="nav-link" data-i18n="nav.timetable">Timetable</a>
+          <a href="./crew.html"      class="nav-link active" data-i18n="nav.crew">Crew</a>
+          <a href="./help.html"      class="nav-link" data-i18n="nav.help">Hilfe</a>
+          <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none" data-i18n="nav.admin">Admin</a>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-toggle-btn active" data-lang="de">DE</button>
+          <span class="lang-toggle-sep">|</span>
+          <button class="lang-toggle-btn" data-lang="en">EN</button>
         </div>
         <div class="nav-avatar" id="nav-avatar">
           <img id="nav-avatar-img" src="" alt="Avatar" />
@@ -35,31 +40,32 @@
 
         <!-- ── State: Noch in keiner Crew ── -->
         <div id="no-crew-section">
-          <p class="invite-hint" style="text-align:center;margin-bottom:1.5rem;color:var(--text-dim)">
+          <p class="invite-hint" style="text-align:center;margin-bottom:1.5rem;color:var(--text-dim)" data-i18n="crew.no_crew">
             Du bist noch in keiner Crew für dieses Festival.
           </p>
 
           <div class="invite-section">
-            <div class="invite-section-title">Neue Crew erstellen</div>
-            <p class="invite-hint">Gib deiner Crew einen Namen und teile den generierten Code:</p>
+            <div class="invite-section-title" data-i18n="crew.create_title">Neue Crew erstellen</div>
+            <p class="invite-hint" data-i18n="crew.create_hint">Gib deiner Crew einen Namen und teile den generierten Code:</p>
             <div style="display:flex;gap:0.5rem">
               <input
                 type="text"
                 id="crew-create-name-input"
                 class="text-input"
+                data-i18n-placeholder="crew.create_placeholder"
                 placeholder="z.B. Die Hive-Fraktion"
                 maxlength="40"
                 autocomplete="off"
               />
-              <button class="btn-primary" id="btn-create-crew">Crew erstellen</button>
+              <button class="btn-primary" id="btn-create-crew" data-i18n="crew.create_btn">Crew erstellen</button>
             </div>
           </div>
 
-          <div class="invite-divider">oder</div>
+          <div class="invite-divider" data-i18n="crew.or">oder</div>
 
           <div class="invite-section">
-            <div class="invite-section-title">Crew beitreten</div>
-            <p class="invite-hint">Gib den Code ein den du von jemandem erhalten hast:</p>
+            <div class="invite-section-title" data-i18n="crew.join_title">Crew beitreten</div>
+            <p class="invite-hint" data-i18n="crew.join_hint">Gib den Code ein den du von jemandem erhalten hast:</p>
             <div style="display:flex;gap:0.5rem">
               <input
                 type="text"
@@ -71,7 +77,7 @@
                 autocorrect="off"
                 spellcheck="false"
               />
-              <button class="btn-primary" id="btn-accept-code">Beitreten</button>
+              <button class="btn-primary" id="btn-accept-code" data-i18n="crew.join_btn">Beitreten</button>
             </div>
           </div>
 
@@ -105,18 +111,18 @@
 
           <!-- Crew-Code -->
           <div class="invite-section">
-            <div class="invite-section-title">Crew erweitern</div>
-            <p class="invite-hint">Teile diesen Code mit Freunden — er bleibt immer gleich:</p>
+            <div class="invite-section-title" data-i18n="crew.invite_title">Crew erweitern</div>
+            <p class="invite-hint" data-i18n="crew.invite_hint">Teile diesen Code mit Freunden — er bleibt immer gleich:</p>
             <div class="invite-code-display" id="invite-code-box">
               <span class="invite-code-text" id="invite-code-text">—</span>
-              <button class="btn-copy" id="btn-copy-code">Kopieren</button>
+              <button class="btn-copy" id="btn-copy-code" data-i18n="crew.copy">Kopieren</button>
               <button id="btn-regen-code" style="display:none;background:none;border:1px solid var(--accent);color:var(--accent);padding:0.3rem 0.7rem;border-radius:6px;font-size:0.8rem;cursor:pointer" title="Neuen Code generieren">↻ Neu</button>
             </div>
           </div>
 
           <!-- Crew verlassen -->
           <div style="text-align:center;margin:0.5rem 0 1.5rem">
-            <button id="btn-leave-crew" style="
+            <button id="btn-leave-crew" data-i18n="crew.leave" style="
               background:none;
               border:1px solid var(--danger);
               color:var(--danger);
@@ -129,21 +135,21 @@
 
           <!-- Gemeinsame Favoriten -->
           <div id="shared-section" style="display:none">
-            <h2 class="section-title">Alle wollen sehen 🔥</h2>
+            <h2 class="section-title" data-i18n="crew.shared_title">Alle wollen sehen 🔥</h2>
             <div id="shared-favorites" class="artist-list" style="margin-bottom:1.5rem"></div>
           </div>
 
           <!-- Andere Crews / Ähnlichkeitsscore -->
           <div id="crew-match-section">
-            <h2 class="section-title">Andere Crews beim Festival</h2>
+            <h2 class="section-title" data-i18n="crew.match_title">Andere Crews beim Festival</h2>
             <div id="crew-match-list"></div>
           </div>
 
           <!-- Artist-Liste mit Crew-Ratings -->
-          <h2 class="section-title" id="crew-list-title">Crew-Bewertungen</h2>
+          <h2 class="section-title" id="crew-list-title" data-i18n="crew.ratings_title">Crew-Bewertungen</h2>
           <div id="member-filter-banner" class="member-filter-banner" style="display:none"></div>
           <div id="crew-artist-list" class="artist-list">
-            <div class="loader"><div class="spinner"></div> Lade...</div>
+            <div class="loader"><div class="spinner"></div> <span data-i18n="crew.loading">Lade...</span></div>
           </div>
 
         </div><!-- /in-crew-section -->

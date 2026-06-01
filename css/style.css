@@ -1868,3 +1868,121 @@ details[open] > .faq-question::after {
   font-size: 0.82em;
   color: var(--text);
 }
+
+/* ── Language Toggle ── */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+}
+
+.lang-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transition: color var(--transition), background var(--transition);
+}
+
+.lang-toggle-btn.active {
+  color: var(--accent-light);
+  background: var(--bg-surface);
+}
+
+.lang-toggle-btn:hover:not(.active) {
+  color: var(--text-muted);
+}
+
+.lang-toggle-sep {
+  color: var(--text-dim);
+  font-size: 0.6rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── SW-Update-Toast ── */
+.toast.update-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.toast.update-toast .toast-reload-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.25rem 0.65rem;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── App-Hero (help.html) ── */
+.app-hero {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.25rem 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.app-hero-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  margin-bottom: 0.6rem;
+  letter-spacing: 0.02em;
+}
+
+.app-hero-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+  line-height: 1.5;
+}
+
+.app-hero-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.app-hero-features li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.app-hero-features li::before {
+  content: '•';
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.app-hero-lang {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-style: italic;
+}

@@ -18,22 +18,23 @@
   <!-- ── Offline Login Screen ── -->
   <div id="offline-login-screen" style="display:none">
     <div class="login-logo">HEAR<span>D</span></div>
-    <p class="login-tagline" id="offline-user-greeting">Du bist offline.</p>
-    <p class="offline-login-hint">Gib deine Festival-Passphrase ein um fortzufahren.</p>
+    <p class="login-tagline" id="offline-user-greeting" data-i18n="offline.greeting">Du bist offline.</p>
+    <p class="offline-login-hint" data-i18n="offline.hint">Gib deine Festival-Passphrase ein um fortzufahren.</p>
     <input
       type="password"
       id="offline-passphrase-input"
       class="passphrase-input"
+      data-i18n-placeholder="offline.placeholder"
       placeholder="Festival-Passphrase..."
       autocomplete="current-password"
     >
     <button id="btn-offline-login" class="btn-google" style="justify-content:center">
-      Offline einloggen
+      <span data-i18n="offline.btn">Offline einloggen</span>
     </button>
-    <p id="offline-login-error" class="offline-error" style="display:none">
+    <p id="offline-login-error" class="offline-error" style="display:none" data-i18n="offline.error">
       Falsche Passphrase. Nochmal?
     </p>
-    <p class="offline-forgot-hint">
+    <p class="offline-forgot-hint" data-i18n="offline.forgot">
       Vergessen? Kurz ins WLAN &rarr; Google-Login &rarr; Profil &rarr; neue Passphrase setzen.
     </p>
   </div>
@@ -41,7 +42,7 @@
   <!-- ── Login Screen ── -->
   <div id="login-screen" style="display:flex">
     <div class="login-logo">HEAR<span>D</span></div>
-    <p class="login-tagline">Hör rein, bewerte, plane deinen persönlichen Festival-Timetable.</p>
+    <p class="login-tagline" data-i18n="login.tagline">Hör rein, bewerte, plane deinen persönlichen Festival-Timetable.</p>
     <button id="btn-login" class="btn-google">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -49,16 +50,16 @@
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      Mit Google anmelden
+      <span data-i18n="login.google">Mit Google anmelden</span>
     </button>
-    <button id="btn-login-microsoft" class="btn-microsoft">
+    <button id="btn-login-microsoft" class="btn-microsoft" style="display:none">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M11.4 2H2v9.4h9.4V2z" fill="#F25022"/>
         <path d="M22 2h-9.4v9.4H22V2z" fill="#7FBA00"/>
         <path d="M11.4 12.6H2V22h9.4v-9.4z" fill="#00A4EF"/>
         <path d="M22 12.6h-9.4V22H22v-9.4z" fill="#FFB900"/>
       </svg>
-      Mit Microsoft anmelden
+      <span data-i18n="login.microsoft">Mit Microsoft anmelden</span>
     </button>
   </div>
 
@@ -66,7 +67,7 @@
   <div id="app-shell">
 
     <!-- Offline-Banner -->
-    <div class="offline-banner" id="offline-banner">
+    <div class="offline-banner" id="offline-banner" data-i18n="offline.banner">
       Offline — Änderungen werden gespeichert und beim nächsten Mal synchronisiert
     </div>
 
@@ -75,14 +76,19 @@
       <a href="./index.html" class="nav-logo">H<span>D</span></a>
       <button id="nav-festival" class="nav-festival" style="display:none"></button>
       <div class="nav-links">
-        <a href="./index.html"     class="nav-link active">Artists</a>
-        <a href="./timetable.html" class="nav-link">Timetable</a>
-        <a href="./crew.html"      class="nav-link">Crew</a>
-        <a href="./help.html"      class="nav-link">Hilfe</a>
-        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none">Admin</a>
+        <a href="./index.html"     class="nav-link active" data-i18n="nav.artists">Artists</a>
+        <a href="./timetable.html" class="nav-link" data-i18n="nav.timetable">Timetable</a>
+        <a href="./crew.html"      class="nav-link" data-i18n="nav.crew">Crew</a>
+        <a href="./help.html"      class="nav-link" data-i18n="nav.help">Hilfe</a>
+        <a href="./admin.html"     class="nav-link" id="nav-admin" style="display:none" data-i18n="nav.admin">Admin</a>
+      </div>
+      <div class="lang-toggle">
+        <button class="lang-toggle-btn active" data-lang="de">DE</button>
+        <span class="lang-toggle-sep">|</span>
+        <button class="lang-toggle-btn" data-lang="en">EN</button>
       </div>
       <span id="app-version" style="font-size:0.65rem;color:var(--text-dim);margin-right:0.25rem"></span>
-      <div class="nav-avatar" id="nav-avatar" title="Abmelden">
+      <div class="nav-avatar" id="nav-avatar" data-i18n-title="profile.logout" title="Abmelden">
         <img id="nav-avatar-img" src="" alt="Avatar">
       </div>
     </nav>
@@ -96,34 +102,35 @@
           type="search"
           id="search-input"
           class="search-input"
+          data-i18n-placeholder="filter.search"
           placeholder="Artist suchen..."
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
         >
         <div class="filter-pills" id="stage-pills">
-          <button class="pill active" data-stage="all">Alle Stages</button>
+          <button class="pill active" data-stage="all" data-i18n="filter.all_stages">Alle Stages</button>
         </div>
         <div class="filter-pills">
-          <button class="pill active" data-status="all">Alle</button>
-          <button class="pill" data-status="unrated">Noch nicht bewertet</button>
-          <button class="pill" data-status="rated">Bewertet</button>
-          <button class="pill" data-status="favorites">Favoriten ♥</button>
-          <button class="pill" data-status="listened">Reingehört</button>
+          <button class="pill active" data-status="all" data-i18n="filter.all">Alle</button>
+          <button class="pill" data-status="unrated" data-i18n="filter.unrated">Noch nicht bewertet</button>
+          <button class="pill" data-status="rated" data-i18n="filter.rated">Bewertet</button>
+          <button class="pill" data-status="favorites" data-i18n="filter.favorites">Favoriten ♥</button>
+          <button class="pill" data-status="listened" data-i18n="filter.listened">Reingehört</button>
         </div>
       </div>
 
       <div class="artist-count" id="artist-count">
         <span id="artist-count-text"></span>
         <div class="sort-controls">
-          <button class="sort-btn active" data-sort="name-asc" title="A → Z">A↑</button>
-          <button class="sort-btn" data-sort="name-desc" title="Z → A">A↓</button>
-          <button class="sort-btn" data-sort="rating-desc" title="Höchste Bewertung zuerst">★↓</button>
-          <button class="sort-btn" data-sort="rating-asc" title="Niedrigste Bewertung zuerst">★↑</button>
+          <button class="sort-btn active" data-sort="name-asc" data-i18n-title="sort.name_asc" title="A → Z">A↑</button>
+          <button class="sort-btn" data-sort="name-desc" data-i18n-title="sort.name_desc" title="Z → A">A↓</button>
+          <button class="sort-btn" data-sort="rating-desc" data-i18n-title="sort.rating_desc" title="Höchste Bewertung zuerst">★↓</button>
+          <button class="sort-btn" data-sort="rating-asc" data-i18n-title="sort.rating_asc" title="Niedrigste Bewertung zuerst">★↑</button>
         </div>
       </div>
       <div class="artist-list" id="artist-list">
-        <div class="loader"><div class="spinner"></div> Lade Artists...</div>
+        <div class="loader"><div class="spinner"></div> <span data-i18n="loading.artists">Lade Artists...</span></div>
       </div>
     </main>
 
