@@ -1,3 +1,6 @@
 node_modules/
 service-account.json
 artists.json
+moyn-artists.json
+backups/
+reports/

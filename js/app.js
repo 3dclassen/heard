@@ -18,7 +18,8 @@ import {
 import {
   setupPassphrase, verifyPassphrase,
   hasOfflineHash, hasCachedUser, getCachedUser, cacheUserForOffline,
-  generatePassphraseSuggestion
+  generatePassphraseSuggestion, importOfflineHash,
+  hasDismissedPassphrasePrompt, dismissPassphrasePrompt
 } from './offline-auth.js';
 
 import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
@@ -179,8 +180,18 @@ onAuthChange(async user => {
     showApp();
     startListeners();
     await syncOfflineRatings();
-    // Passphrase-Setup nach kurzem Delay vorschlagen wenn noch nicht eingerichtet
-    if (!hasOfflineHash()) {
+
+    // Falls lokal kein Hash (mehr) da ist, aber schon einer in Firebase hinterlegt
+    // wurde (z.B. Storage geleert, neues Gerät) — den bestehenden übernehmen statt
+    // eine neue Passphrase vorzuschlagen.
+    if (!hasOfflineHash() && state.userProfile?.offline_auth_hash) {
+      importOfflineHash(state.userProfile.offline_auth_hash);
+    }
+
+    // Passphrase-Setup nach kurzem Delay vorschlagen — aber nur wenn wirklich noch
+    // keine eingerichtet ist UND der User den Vorschlag nicht schon mal weggeklickt hat
+    // (sonst würde bei jedem Login erneut eine neue Vorschlags-Passphrase auftauchen).
+    if (!hasOfflineHash() && !hasDismissedPassphrasePrompt()) {
       setTimeout(() => showPassphraseSetup(), 1500);
     }
   } else {
@@ -249,6 +260,7 @@ function loadOfflineWithoutAuth() {
   showApp();
   if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
   render();
+  openArtistFromDeepLink();
   showToast(t('offline.banner'), 'error');
 }
 
@@ -269,6 +281,7 @@ $('btn-offline-login')?.addEventListener('click', async () => {
     showApp();
     if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
     render();
+    openArtistFromDeepLink();
     showToast(randomQuote('offlineLoginSuccess'), 'success');
   } else {
     if (errorEl) errorEl.style.display = '';
@@ -297,7 +310,10 @@ function closePassphrasePanel() {
   document.body.style.overflow = '';
 }
 
-passphraseBackdrop?.addEventListener('click', closePassphrasePanel);
+passphraseBackdrop?.addEventListener('click', () => {
+  dismissPassphrasePrompt();
+  closePassphrasePanel();
+});
 
 function showPassphraseSetup() {
   const suggestion = generatePassphraseSuggestion(
@@ -368,7 +384,10 @@ function showPassphraseSetup() {
     showToast(t('toast.passphrase_saved'), 'success');
   });
 
-  $('btn-skip-passphrase')?.addEventListener('click', closePassphrasePanel);
+  $('btn-skip-passphrase')?.addEventListener('click', () => {
+    dismissPassphrasePrompt();
+    closePassphrasePanel();
+  });
 
   openPassphrasePanel();
 }
@@ -385,6 +404,7 @@ function startListeners() {
     state.artists = artists;
     cacheArtists(artists);
     render();
+    openArtistFromDeepLink();
     if (countChanged) showToast(t('toast.lineup_updated'));
   });
 
@@ -432,6 +452,7 @@ if (!isOnline()) {
   state.ratings = getCachedRatings();
   state.users   = getCachedUsers();
   render();
+  openArtistFromDeepLink();
 }
 
 async function syncOfflineRatings() {
@@ -660,6 +681,12 @@ function getArtistRatings(artistId) {
   return state.ratings.filter(r => r.artist_id === artistId);
 }
 
+function hasCrewComment(artistId) {
+  return state.ratings.some(r =>
+    r.artist_id === artistId && r.user_id !== state.user?.uid && r.comment?.trim()
+  );
+}
+
 function filteredArtists() {
   const filtered = state.artists.filter(a => {
     if (state.filterStage !== 'all' && a.stage !== state.filterStage) return false;
@@ -670,6 +697,7 @@ function filteredArtists() {
       if (state.filterStatus === 'rated'      && !(r?.rating > 0)) return false;
       if (state.filterStatus === 'favorites'  && !r?.want_to_see)  return false;
       if (state.filterStatus === 'listened'   && !r?.listened)     return false;
+      if (state.filterStatus === 'crew_commented' && !hasCrewComment(a.id)) return false;
     }
 
     if (state.searchQuery) {
@@ -795,6 +823,21 @@ function openPanel(artistId) {
   panelBackdrop.classList.add('open');
   panel.classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+// ── Deep-Link: ?artist=<id> (z.B. Klick auf einen Artist im Timetable) ──
+
+let deepLinkHandled = false;
+
+function openArtistFromDeepLink() {
+  if (deepLinkHandled) return;
+  deepLinkHandled = true;
+  const artistId = new URLSearchParams(location.search).get('artist');
+  if (!artistId) return;
+  openPanel(artistId);
+  const url = new URL(location.href);
+  url.searchParams.delete('artist');
+  history.replaceState({}, '', url);
 }
 
 function closePanel() {

@@ -3,3 +3,6 @@ scraper/.env
 .DS_Store
 Thumbs.db
 MS_Login.txt
+.claude/
+TT/
+PIX/

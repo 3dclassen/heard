@@ -33,6 +33,7 @@ const TRANSLATIONS = {
     'filter.rated':       'Bewertet',
     'filter.favorites':   'Favoriten ♥',
     'filter.listened':    'Reingehört',
+    'filter.crew_commented': 'Crew-Kommentare 💬',
 
     // Sort
     'sort.name_asc':    'A → Z',
@@ -117,6 +118,8 @@ const TRANSLATIONS = {
     'timetable.no_times':    'Timetable (Zeiten) noch nicht verfügbar. Hier sind deine Favoriten:',
     'timetable.no_day':      'Keine Favoriten an diesem Tag.',
     'timetable.conflict':    'Zeitkonflikt ⚡',
+    'timetable.min_rating':  'Auch aufnehmen ab:',
+    'timetable.only_hearts': 'Nur ♥',
 
     // Crew-Seite
     'crew.no_crew':          'Du bist noch in keiner Crew für dieses Festival.',
@@ -249,6 +252,7 @@ const TRANSLATIONS = {
     'filter.rated':      'Rated',
     'filter.favorites':  'Favorites ♥',
     'filter.listened':   'Listened',
+    'filter.crew_commented': 'Crew comments 💬',
 
     // Sort
     'sort.name_asc':    'A → Z',
@@ -333,6 +337,8 @@ const TRANSLATIONS = {
     'timetable.no_times':     'Timetable (times) not available yet. Here are your favorites:',
     'timetable.no_day':       'No favorites on this day.',
     'timetable.conflict':     'Time conflict ⚡',
+    'timetable.min_rating':   'Also include from:',
+    'timetable.only_hearts':  'Only ♥',
 
     // Crew page
     'crew.no_crew':          "You're not in a crew for this festival yet.",

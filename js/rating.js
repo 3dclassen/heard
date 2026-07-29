@@ -42,12 +42,14 @@ export function sharedFavorites(ratings, artists, userIds) {
 
 /**
  * Gibt Favoriten eines Users zurück, sortiert nach Rating (desc).
+ * @param {number} minRating - Artists ab dieser Sternebewertung zusätzlich zu ♥-Favoriten
+ *   einschließen (0 = nur ♥-Favoriten, keine automatische Aufnahme über Sterne).
  */
-export function myFavorites(ratings, artists, userId) {
+export function myFavorites(ratings, artists, userId, minRating = 4) {
   return artists
     .filter(a => {
       const r = getMyRating(ratings, userId, a.id);
-      return r?.want_to_see || r?.rating >= 4;
+      return r?.want_to_see || (minRating > 0 && r?.rating >= minRating);
     })
     .sort((a, b) => {
       const ra = getMyRating(ratings, userId, a.id)?.rating || 0;

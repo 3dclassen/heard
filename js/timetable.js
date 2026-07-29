@@ -8,14 +8,27 @@ import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
 import { myFavorites, sharedFavorites, getMyRating } from './rating.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
-const DAY_ORDER = ['wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = {
-  wednesday: 'Mi / Wed',
-  thursday:  'Do / Thu',
-  friday:    'Fr / Fri',
-  saturday:  'Sa / Sat',
-  sunday:    'So / Sun'
+  monday:    'Mon',
+  tuesday:   'Tue',
+  wednesday: 'Wed',
+  thursday:  'Thu',
+  friday:    'Fri',
+  saturday:  'Sat',
+  sunday:    'Sun'
 };
+
+const MIN_RATING_KEY = 'heard_timetable_min_rating';
+
+function loadMinRating() {
+  const v = parseInt(localStorage.getItem(MIN_RATING_KEY), 10);
+  return Number.isInteger(v) && v >= 0 && v <= 5 ? v : 4;
+}
+
+function saveMinRating(v) {
+  localStorage.setItem(MIN_RATING_KEY, String(v));
+}
 
 let state = {
   user:             null,
@@ -24,6 +37,7 @@ let state = {
   ratings:          [],
   activeDay:        null,
   activeFestivalId: 'modem-2026',
+  minRating:        loadMinRating(),
   unsubscribers:    []
 };
 
@@ -75,7 +89,7 @@ function startListeners() {
 function render() {
   if (!state.user) return;
 
-  const favorites = myFavorites(state.ratings, state.artists, state.user.uid);
+  const favorites = myFavorites(state.ratings, state.artists, state.user.uid, state.minRating);
   const hasTimestamps = favorites.some(a => a.time_start != null);
 
   if (!hasTimestamps) {
@@ -86,6 +100,30 @@ function render() {
   renderTimetableView(favorites);
 }
 
+// ── Sterne-Schwelle: welche Artists zusätzlich zu ♥-Favoriten aufgenommen werden ──
+
+function renderMinRatingControl() {
+  const options = [0, 1, 2, 3, 4, 5];
+  return `
+    <div class="rating-tabs">
+      <span class="rating-tabs-label">${t('timetable.min_rating')}</span>
+      ${options.map(n => `
+        <button class="rating-tab ${n === state.minRating ? 'active' : ''}" data-min="${n}">
+          ${n === 0 ? t('timetable.only_hearts') : `≥${n}★`}
+        </button>`).join('')}
+    </div>`;
+}
+
+function wireMinRatingControl(container) {
+  container.querySelectorAll('.rating-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.minRating = parseInt(btn.dataset.min, 10);
+      saveMinRating(state.minRating);
+      render();
+    });
+  });
+}
+
 // ── Favoritenliste (noch kein Timetable) ──
 
 function renderFavoritesList(favorites) {
@@ -94,14 +132,17 @@ function renderFavoritesList(favorites) {
 
   if (favorites.length === 0) {
     container.innerHTML = `
+      ${renderMinRatingControl()}
       <div class="empty-state">
         <div class="empty-state-icon">📋</div>
         <p>${t('timetable.no_favorites')}</p>
       </div>`;
+    wireMinRatingControl(container);
     return;
   }
 
   container.innerHTML = `
+    ${renderMinRatingControl()}
     <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">
       ${t('timetable.no_times')}
     </p>
@@ -109,7 +150,7 @@ function renderFavoritesList(favorites) {
       ${favorites.map(a => {
         const r = getMyRating(state.ratings, state.user.uid, a.id);
         return `
-          <div class="timetable-slot">
+          <div class="timetable-slot clickable" data-id="${a.id}">
             <div class="slot-artist">${escHtml(a.name)}</div>
             <div style="display:flex;gap:0.5rem;margin-top:0.25rem;align-items:center">
               <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
@@ -118,6 +159,11 @@ function renderFavoritesList(favorites) {
           </div>`;
       }).join('')}
     </div>`;
+
+  wireMinRatingControl(container);
+  container.querySelectorAll('.timetable-slot.clickable').forEach(el => {
+    el.addEventListener('click', () => goToArtist(el.dataset.id));
+  });
 }
 
 // ── Timetable-Ansicht (mit Zeiten) ──
@@ -162,7 +208,7 @@ function renderTimetableView(favorites) {
         const isConflict = conflicts.has(a.id);
         const r = getMyRating(state.ratings, state.user.uid, a.id);
         return `
-          <div class="timetable-slot ${isConflict ? 'conflict' : ''}">
+          <div class="timetable-slot clickable ${isConflict ? 'conflict' : ''}" data-id="${a.id}">
             <div class="slot-time">
               ${formatTime(a.time_start)} – ${formatTime(a.time_end)}
               ${isConflict ? `<span class="conflict-badge">${t('timetable.conflict')}</span>` : ''}
@@ -177,7 +223,9 @@ function renderTimetableView(favorites) {
           </div>`;
       }).join('');
 
-  container.innerHTML = tabsHtml + slotsHtml;
+  container.innerHTML = renderMinRatingControl() + tabsHtml + slotsHtml;
+
+  wireMinRatingControl(container);
 
   // Tab-Klick
   container.querySelectorAll('.day-tab').forEach(btn => {
@@ -186,6 +234,16 @@ function renderTimetableView(favorites) {
       render();
     });
   });
+
+  // Artist-Klick -> Sprung in die Artists-Ansicht mit geöffnetem Detail-Panel
+  container.querySelectorAll('.timetable-slot.clickable').forEach(el => {
+    el.addEventListener('click', () => goToArtist(el.dataset.id));
+  });
+}
+
+function goToArtist(artistId) {
+  if (!artistId) return;
+  window.location.href = `./index.html?artist=${encodeURIComponent(artistId)}`;
 }
 
 // ── Konflikt-Erkennung ──

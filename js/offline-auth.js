@@ -1,7 +1,8 @@
 // ── HEARD — Offline-Auth (Passphrase) ──
 
-const LS_HASH = 'heard_offline_hash';
-const LS_USER = 'heard_user_cache';
+const LS_HASH      = 'heard_offline_hash';
+const LS_USER      = 'heard_user_cache';
+const LS_DISMISSED = 'heard_passphrase_prompt_dismissed';
 
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -23,6 +24,25 @@ export async function verifyPassphrase(passphrase) {
 
 export function hasOfflineHash() {
   return !!localStorage.getItem(LS_HASH);
+}
+
+// Bereits in Firebase gespeicherten Hash lokal übernehmen (z.B. nach Storage-Verlust
+// oder auf einem neuen Gerät) — verhindert, dass erneut eine neue Passphrase
+// vorgeschlagen wird, obwohl der User schon eine eingerichtet hat.
+export function importOfflineHash(hash) {
+  if (!hash) return;
+  localStorage.setItem(LS_HASH, hash);
+}
+
+// Merkt sich, dass der User den Setup-Vorschlag bewusst weggeklickt hat, damit er
+// nicht bei jedem Login erneut mit einer neuen Vorschlags-Passphrase auftaucht.
+// Über "Profil → Passphrase einrichten" bleibt das Setup jederzeit manuell erreichbar.
+export function hasDismissedPassphrasePrompt() {
+  return !!localStorage.getItem(LS_DISMISSED);
+}
+
+export function dismissPassphrasePrompt() {
+  localStorage.setItem(LS_DISMISSED, '1');
 }
 
 export function hasCachedUser() {

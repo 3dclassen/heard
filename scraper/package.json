@@ -7,7 +7,9 @@
     "scrape": "node scrape-modem.js",
     "scrape:dry": "node scrape-modem.js --dry-run",
     "scrape:moyn": "node scrape-moyn.js",
-    "scrape:moyn:dry": "node scrape-moyn.js --dry-run"
+    "scrape:moyn:dry": "node scrape-moyn.js --dry-run",
+    "import:timetable:dry": "node import-timetable.js",
+    "import:timetable:write": "node import-timetable.js --write"
   },
   "dependencies": {
     "axios": "^1.7.0",
