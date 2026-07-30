@@ -4,7 +4,7 @@ import {
   auth, db,
   loginWithGoogle, loginWithMicrosoft, logout, onAuthChange, ensureUserProfile,
   onArtistsChange, onRatingsChange, onUsersChange, onFestivalsChange,
-  saveRating, ratingId, saveOfflineAuthHash, saveActiveFestival, saveFestival
+  saveRating, ratingId, saveOfflineAuthHash, saveOfflineAuthDismissed, saveActiveFestival, saveFestival
 } from './firebase.js';
 
 import {
@@ -19,14 +19,14 @@ import {
   setupPassphrase, verifyPassphrase,
   hasOfflineHash, hasCachedUser, getCachedUser, cacheUserForOffline,
   generatePassphraseSuggestion, importOfflineHash,
-  hasDismissedPassphrasePrompt, dismissPassphrasePrompt
+  hasDismissedPassphrasePrompt, dismissPassphrasePrompt, importDismissed
 } from './offline-auth.js';
 
 import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
 
 // ── Konstante ──
 
-const APP_VERSION = '0.16';
+const APP_VERSION = self.APP_VERSION;
 
 const FESTIVAL_STAGE_LABELS = {
   'modem-2026': { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' }
@@ -123,25 +123,8 @@ const panelBackdrop      = $('panel-backdrop');
 const panel              = $('panel');
 
 // ── Service Worker ──
-// controllerchange außerhalb des load-Events registrieren (Race Condition fix)
-if ('serviceWorker' in navigator) {
-  let swUpdateHandled = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!swUpdateHandled) {
-      swUpdateHandled = true;
-      showUpdateToast();
-    }
-  });
-
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      setInterval(() => reg.update(), 60_000);
-    });
-    navigator.serviceWorker.addEventListener('message', e => {
-      if (e.data?.type === 'SYNC_REQUESTED') syncOfflineRatings();
-    });
-  });
-}
+// Registrierung + Update-Handling laufen in sw-register.js (auf jeder Seite eingebunden).
+window.addEventListener('sw:sync-requested', syncOfflineRatings);
 
 // ── Auth ──
 
@@ -186,6 +169,13 @@ onAuthChange(async user => {
     // eine neue Passphrase vorzuschlagen.
     if (!hasOfflineHash() && state.userProfile?.offline_auth_hash) {
       importOfflineHash(state.userProfile.offline_auth_hash);
+    }
+
+    // Dasselbe für den Dismissed-Status: falls lokaler Storage verloren ging (z.B.
+    // iOS-PWA-Eviction), aber der User den Prompt schon mal bewusst weggeklickt hat,
+    // das aus Firebase übernehmen statt den Prompt erneut zu zeigen.
+    if (!hasDismissedPassphrasePrompt() && state.userProfile?.offline_auth_dismissed) {
+      importDismissed(true);
     }
 
     // Passphrase-Setup nach kurzem Delay vorschlagen — aber nur wenn wirklich noch
@@ -310,8 +300,16 @@ function closePassphrasePanel() {
   document.body.style.overflow = '';
 }
 
+function syncDismissedToFirestore() {
+  if (isOnline() && state.user) {
+    saveOfflineAuthDismissed(state.user.uid, true)
+      .catch(e => console.warn('[offline-auth] Dismissed-Status nicht in Firebase gespeichert:', e));
+  }
+}
+
 passphraseBackdrop?.addEventListener('click', () => {
   dismissPassphrasePrompt();
+  syncDismissedToFirestore();
   closePassphrasePanel();
 });
 
@@ -335,6 +333,7 @@ function showPassphraseSetup() {
       <div class="passphrase-suggestion-label">${t('passphrase.suggestion_label')}</div>
       <div class="passphrase-suggestion-box" id="passphrase-suggestion">${escHtml(suggestion)}</div>
     </div>
+    <div class="passphrase-divider">${t('passphrase.divider')}</div>
     <div style="display:flex;flex-direction:column;gap:0.75rem">
       <input type="text" id="passphrase-input-1" class="passphrase-input" placeholder="${t('passphrase.input_1')}" value="">
       <input type="text" id="passphrase-input-2" class="passphrase-input" placeholder="${t('passphrase.input_2')}">
@@ -351,6 +350,14 @@ function showPassphraseSetup() {
     const i2 = $('passphrase-input-2');
     if (i1) i1.value = s;
     if (i2) i2.value = s;
+
+    // Vorschlag füllt nur die Felder — der Save-Klick bleibt ein bewusster zweiter
+    // Schritt. Damit das nicht übersehen wird, Fokus sichtbar auf den Save-Button lenken.
+    const saveBtn = $('btn-save-passphrase');
+    saveBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    saveBtn?.focus();
+    saveBtn?.classList.add('pulse-attention');
+    setTimeout(() => saveBtn?.classList.remove('pulse-attention'), 1500);
   });
 
   $('btn-save-passphrase')?.addEventListener('click', async () => {
@@ -386,6 +393,7 @@ function showPassphraseSetup() {
 
   $('btn-skip-passphrase')?.addEventListener('click', () => {
     dismissPassphrasePrompt();
+    syncDismissedToFirestore();
     closePassphrasePanel();
   });
 
@@ -1114,20 +1122,6 @@ function closeProfileModal() {
 }
 
 profileBackdrop?.addEventListener('click', closeProfileModal);
-
-// ── Update-Toast (SW-Update) ──
-
-function showUpdateToast() {
-  const existing = document.getElementById('update-toast');
-  if (existing) return;
-
-  const toast = document.createElement('div');
-  toast.id = 'update-toast';
-  toast.className = 'toast update-toast show';
-  toast.innerHTML = `<span>${t('sw.update_toast')}</span><button class="toast-reload-btn" id="btn-reload-update">${t('sw.update_reload')}</button>`;
-  document.body.appendChild(toast);
-  document.getElementById('btn-reload-update')?.addEventListener('click', () => window.location.reload());
-}
 
 // ── Init ──
 

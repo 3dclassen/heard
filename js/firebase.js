@@ -233,6 +233,10 @@ export async function saveOfflineAuthHash(uid, hash) {
   await updateDoc(doc(db, "users", uid), { offline_auth_hash: hash });
 }
 
+export async function saveOfflineAuthDismissed(uid, dismissed) {
+  await updateDoc(doc(db, "users", uid), { offline_auth_dismissed: dismissed });
+}
+
 export async function saveActiveFestival(uid, festivalId) {
   await updateDoc(doc(db, "users", uid), { active_festival_id: festivalId });
 }

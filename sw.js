@@ -1,4 +1,5 @@
-const CACHE_NAME = 'heard-v13';
+importScripts('./version.js');
+const CACHE_NAME = 'heard-v' + self.APP_VERSION;
 
 // Statische App-Dateien die gecacht werden
 const STATIC_ASSETS = [
@@ -10,8 +11,10 @@ const STATIC_ASSETS = [
   './help.html',
   './css/design-tokens.css',
   './css/style.css',
+  './version.js',
   './js/firebase.js',
   './js/app.js',
+  './js/sw-register.js',
   './js/i18n.js',
   './js/help.js',
   './js/offline-auth.js',

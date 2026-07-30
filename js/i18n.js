@@ -69,8 +69,8 @@ const TRANSLATIONS = {
     'toast.synced':         'Bewertung(en) synchronisiert',
 
     // SW-Update-Toast
-    'sw.update_toast':  'Neue Version verfügbar',
-    'sw.update_reload': 'Jetzt neu laden',
+    'sw.updating':       'Aktualisiere App…',
+    'sw.update_waiting': 'Update verfügbar — wird nach dem Speichern geladen',
 
     // Leere Zustände
     'empty.no_artists_admin':  'Noch keine Artists geladen. Ein Admin muss zuerst den Scraper ausführen.',
@@ -81,6 +81,7 @@ const TRANSLATIONS = {
     'passphrase.hint':            "Auf dem Festival gibt's kein Internet. Mit dieser Passphrase kannst du dich trotzdem einloggen.",
     'passphrase.write_down':      'Schreib sie auf — oder schick sie dir per WhatsApp.',
     'passphrase.suggestion_label':'Vorschlag (tippen zum Übernehmen):',
+    'passphrase.divider':         '— oder eigene Passphrase eingeben —',
     'passphrase.input_1':         'Passphrase eingeben...',
     'passphrase.input_2':         'Passphrase bestätigen...',
     'passphrase.mismatch':        'Die Passphrases stimmen nicht überein.',
@@ -288,8 +289,8 @@ const TRANSLATIONS = {
     'toast.synced':         'rating(s) synced',
 
     // SW-Update-Toast
-    'sw.update_toast':  'New version available',
-    'sw.update_reload': 'Reload now',
+    'sw.updating':       'Updating app…',
+    'sw.update_waiting': "Update available — will load once you're done",
 
     // Empty states
     'empty.no_artists_admin':  'No artists loaded yet. An admin needs to run the scraper first.',
@@ -300,6 +301,7 @@ const TRANSLATIONS = {
     'passphrase.hint':            "There's no internet at the festival. This passphrase lets you log in anyway.",
     'passphrase.write_down':      'Write it down — or send it to yourself via WhatsApp.',
     'passphrase.suggestion_label':'Suggestion (tap to use):',
+    'passphrase.divider':         '— or enter your own passphrase —',
     'passphrase.input_1':         'Enter passphrase...',
     'passphrase.input_2':         'Confirm passphrase...',
     'passphrase.mismatch':        "Passphrases don't match.",

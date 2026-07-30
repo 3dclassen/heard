@@ -45,6 +45,12 @@ export function dismissPassphrasePrompt() {
   localStorage.setItem(LS_DISMISSED, '1');
 }
 
+// Bereits in Firebase hinterlegten Dismissed-Status lokal übernehmen (z.B. nach
+// Storage-Verlust oder auf einem neuen Gerät) — analog zu importOfflineHash().
+export function importDismissed(flag) {
+  if (flag) localStorage.setItem(LS_DISMISSED, '1');
+}
+
 export function hasCachedUser() {
   return !!localStorage.getItem(LS_USER);
 }

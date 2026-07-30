@@ -1687,6 +1687,22 @@ input, textarea {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+.passphrase-divider {
+  font-size: var(--font-size-sm);
+  color: var(--text-dim);
+  text-align: center;
+  margin: var(--space-xs) 0;
+}
+
+@keyframes pulseAttention {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 0 4px var(--accent-glow); }
+}
+
+.pulse-attention {
+  animation: pulseAttention 0.5s ease-in-out 2;
+}
+
 /* ── Nav Festival ── */
 
 .nav-festival {
@@ -1946,23 +1962,8 @@ details[open] > .faq-question::after {
 
 /* ── SW-Update-Toast ── */
 .toast.update-toast {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.toast.update-toast .toast-reload-btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 0.25rem 0.65rem;
-  border-radius: 5px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ── App-Hero (help.html) ── */
