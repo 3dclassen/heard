@@ -934,6 +934,25 @@ input, textarea {
   margin-left: 0.5rem;
 }
 
+.slot-crew-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+
+.slot-crew-avatars .crew-avatar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.slot-crew-avatars .crew-avatar.self {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
 /* ── Crew Page ── */
 
 .crew-grid {

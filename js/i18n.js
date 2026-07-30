@@ -121,6 +121,10 @@ const TRANSLATIONS = {
     'timetable.conflict':    'Zeitkonflikt ⚡',
     'timetable.min_rating':  'Auch aufnehmen ab:',
     'timetable.only_hearts': 'Nur ♥',
+    'timetable.view_label':  'Ansicht:',
+    'timetable.view_mine':   'Nur ich',
+    'timetable.view_crew':   '+ Crew',
+    'timetable.you':         'Du',
 
     // Crew-Seite
     'crew.no_crew':          'Du bist noch in keiner Crew für dieses Festival.',
@@ -341,6 +345,10 @@ const TRANSLATIONS = {
     'timetable.conflict':     'Time conflict ⚡',
     'timetable.min_rating':   'Also include from:',
     'timetable.only_hearts':  'Only ♥',
+    'timetable.view_label':   'View:',
+    'timetable.view_mine':    'Just me',
+    'timetable.view_crew':    '+ Crew',
+    'timetable.you':          'You',
 
     // Crew page
     'crew.no_crew':          "You're not in a crew for this festival yet.",

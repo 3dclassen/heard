@@ -59,6 +59,33 @@ export function myFavorites(ratings, artists, userId, minRating = 4) {
 }
 
 /**
+ * Favoriten der ganzen Crew (nicht nur des eigenen Users): ein Artist ist
+ * dabei, sobald IRGENDEIN Mitglied ihn geherzt oder mit >= minRating bewertet hat.
+ * Sortiert nach der besten Bewertung innerhalb der Crew (desc).
+ */
+export function crewFavorites(ratings, artists, userIds, minRating = 4) {
+  const bestRating = a => Math.max(0, ...userIds.map(uid => getMyRating(ratings, uid, a.id)?.rating || 0));
+
+  return artists
+    .filter(a => userIds.some(uid => {
+      const r = getMyRating(ratings, uid, a.id);
+      return r?.want_to_see || (minRating > 0 && r?.rating >= minRating);
+    }))
+    .sort((a, b) => bestRating(b) - bestRating(a));
+}
+
+/**
+ * Welche der übergebenen User haben einen Artist geherzt oder mit
+ * >= minRating bewertet? Für die Zuschreibung "wer hat das ausgewählt".
+ */
+export function votersForArtist(ratings, artistId, userIds, minRating = 4) {
+  return userIds.filter(uid => {
+    const r = ratings.find(r => r.artist_id === artistId && r.user_id === uid);
+    return r?.want_to_see || (minRating > 0 && r?.rating >= minRating);
+  });
+}
+
+/**
  * Fortschritt: Wie viele Artists hat ein User bereits bewertet?
  */
 export function ratingProgress(ratings, artists, userId) {

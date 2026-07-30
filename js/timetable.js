@@ -2,10 +2,10 @@
 
 import {
   auth, onAuthChange, ensureUserProfile,
-  onArtistsChange, onRatingsChange, logout
+  onArtistsChange, onRatingsChange, onCrewChange, onUsersChange, logout
 } from './firebase.js';
 import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
-import { myFavorites, sharedFavorites, getMyRating } from './rating.js';
+import { myFavorites, crewFavorites, votersForArtist, getMyRating } from './rating.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -20,6 +20,7 @@ const DAY_LABELS = {
 };
 
 const MIN_RATING_KEY = 'heard_timetable_min_rating';
+const CREW_VIEW_KEY  = 'heard_timetable_crew_view';
 
 function loadMinRating() {
   const v = parseInt(localStorage.getItem(MIN_RATING_KEY), 10);
@@ -30,14 +31,25 @@ function saveMinRating(v) {
   localStorage.setItem(MIN_RATING_KEY, String(v));
 }
 
+function loadCrewView() {
+  return localStorage.getItem(CREW_VIEW_KEY) === '1';
+}
+
+function saveCrewView(v) {
+  localStorage.setItem(CREW_VIEW_KEY, v ? '1' : '0');
+}
+
 let state = {
   user:             null,
   userProfile:      null,
   artists:          [],
   ratings:          [],
+  crew:             null,
+  users:            [],
   activeDay:        null,
   activeFestivalId: 'modem-2026',
   minRating:        loadMinRating(),
+  crewView:         loadCrewView(),
   unsubscribers:    []
 };
 
@@ -81,15 +93,30 @@ function startListeners() {
     state.ratings = ratings;
     render();
   });
-  state.unsubscribers = [u1, u2];
+  const u3 = onCrewChange(state.user.uid, crew => {
+    state.crew = crew;
+    if (!isCrewViewAvailable()) state.crewView = false;
+    render();
+  });
+  const u4 = onUsersChange(users => {
+    state.users = users;
+    render();
+  });
+  state.unsubscribers = [u1, u2, u3, u4];
 }
 
 // ── Render ──
 
+function isCrewViewAvailable() {
+  return (state.crew?.members?.length || 0) > 1;
+}
+
 function render() {
   if (!state.user) return;
 
-  const favorites = myFavorites(state.ratings, state.artists, state.user.uid, state.minRating);
+  const favorites = (state.crewView && isCrewViewAvailable())
+    ? crewFavorites(state.ratings, state.artists, state.crew.members, state.minRating)
+    : myFavorites(state.ratings, state.artists, state.user.uid, state.minRating);
   const hasTimestamps = favorites.some(a => a.time_start != null);
 
   if (!hasTimestamps) {
@@ -124,6 +151,59 @@ function wireMinRatingControl(container) {
   });
 }
 
+// ── Ansicht: nur meine Auswahl oder + Crew-Picks ──
+
+function renderViewControl() {
+  if (!isCrewViewAvailable()) return '';
+  return `
+    <div class="rating-tabs">
+      <span class="rating-tabs-label">${t('timetable.view_label')}</span>
+      <button class="rating-tab ${!state.crewView ? 'active' : ''}" data-view="mine">${t('timetable.view_mine')}</button>
+      <button class="rating-tab ${state.crewView ? 'active' : ''}" data-view="crew">${t('timetable.view_crew')}</button>
+    </div>`;
+}
+
+function wireViewControl(container) {
+  container.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.crewView = btn.dataset.view === 'crew';
+      saveCrewView(state.crewView);
+      render();
+    });
+  });
+}
+
+// ── Wer hat diesen Artist markiert? (Crew-Avatare zur Zuschreibung) ──
+
+function renderVoterAvatars(artistId) {
+  if (!isCrewViewAvailable()) return '';
+
+  const voters = votersForArtist(state.ratings, artistId, state.crew.members, state.minRating);
+  if (voters.length === 0) return '';
+
+  return `
+    <div class="slot-crew-avatars">
+      ${voters.map(uid => {
+        const isSelf = uid === state.user.uid;
+        const u      = state.users.find(u => u.uid === uid);
+        const name   = isSelf ? t('timetable.you') : (u?.display_name?.split(' ')[0] || '?');
+        return `
+          <div class="crew-avatar ${isSelf ? 'self' : ''}" title="${escHtml(name)}">
+            ${u?.photo_url
+              ? `<img src="${escHtml(u.photo_url)}" alt="">`
+              : `<span style="font-size:0.6rem">${escHtml(getInitials(u?.display_name || name))}</span>`}
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
 // ── Favoritenliste (noch kein Timetable) ──
 
 function renderFavoritesList(favorites) {
@@ -132,16 +212,19 @@ function renderFavoritesList(favorites) {
 
   if (favorites.length === 0) {
     container.innerHTML = `
+      ${renderViewControl()}
       ${renderMinRatingControl()}
       <div class="empty-state">
         <div class="empty-state-icon">📋</div>
         <p>${t('timetable.no_favorites')}</p>
       </div>`;
+    wireViewControl(container);
     wireMinRatingControl(container);
     return;
   }
 
   container.innerHTML = `
+    ${renderViewControl()}
     ${renderMinRatingControl()}
     <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">
       ${t('timetable.no_times')}
@@ -156,10 +239,12 @@ function renderFavoritesList(favorites) {
               <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
               ${r?.rating ? `<span style="color:var(--star);font-size:0.8rem">${'★'.repeat(r.rating)}</span>` : ''}
             </div>
+            ${renderVoterAvatars(a.id)}
           </div>`;
       }).join('')}
     </div>`;
 
+  wireViewControl(container);
   wireMinRatingControl(container);
   container.querySelectorAll('.timetable-slot.clickable').forEach(el => {
     el.addEventListener('click', () => goToArtist(el.dataset.id));
@@ -220,11 +305,13 @@ function renderTimetableView(favorites) {
               <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
               ${r?.rating ? `<span style="color:var(--star);font-size:0.75rem">${'★'.repeat(r.rating)}</span>` : ''}
             </div>
+            ${renderVoterAvatars(a.id)}
           </div>`;
       }).join('');
 
-  container.innerHTML = renderMinRatingControl() + tabsHtml + slotsHtml;
+  container.innerHTML = renderViewControl() + renderMinRatingControl() + tabsHtml + slotsHtml;
 
+  wireViewControl(container);
   wireMinRatingControl(container);
 
   // Tab-Klick
