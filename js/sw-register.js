@@ -43,7 +43,13 @@ if ('serviceWorker' in navigator) {
   });
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
+    // Versionsnummer als Query-Param an die SW-URL hängen: garantiert, dass der Browser
+    // bei jedem Release eine neue SW-Registrierung erkennt (unabhängig von HTTP-Caching
+    // und davon, dass sw.js selbst textuell unverändert bleiben kann — importScripts()
+    // in sw.js unterliegt normalem Caching und wird von der Browser-Update-Prüfung nicht
+    // zuverlässig erfasst).
+    const swUrl = './sw.js' + (window.APP_VERSION ? `?v=${window.APP_VERSION}` : '');
+    navigator.serviceWorker.register(swUrl).then(reg => {
       setInterval(() => reg.update(), 60_000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') reg.update();

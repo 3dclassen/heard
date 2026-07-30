@@ -2,10 +2,12 @@
 
 import {
   auth, onAuthChange, ensureUserProfile,
-  onArtistsChange, onRatingsChange, onCrewChange, onUsersChange, logout
+  onArtistsChange, onRatingsChange, onCrewChange, onUsersChange, logout,
+  onFestivalsChange, saveActiveFestival
 } from './firebase.js';
 import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
 import { myFavorites, crewFavorites, votersForArtist, getMyRating } from './rating.js';
+import { hasOfflineHash } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -46,6 +48,7 @@ let state = {
   ratings:          [],
   crew:             null,
   users:            [],
+  festivals:        [],
   activeDay:        null,
   activeFestivalId: 'modem-2026',
   minRating:        loadMinRating(),
@@ -72,6 +75,8 @@ onAuthChange(async user => {
 function setupNav() {
   const img = $('nav-avatar-img');
   if (img && state.user?.photoURL) img.src = state.user.photoURL;
+  $('nav-avatar')?.addEventListener('click', openProfileModal);
+  $('nav-festival')?.addEventListener('click', openFestivalPanel);
   $('btn-logout')?.addEventListener('click', logout);
   applyTranslations();
   setupLangToggle();
@@ -102,7 +107,136 @@ function startListeners() {
     state.users = users;
     render();
   });
-  state.unsubscribers = [u1, u2, u3, u4];
+  const u5 = onFestivalsChange(festivals => {
+    state.festivals = festivals;
+    updateNavFestival();
+  });
+  state.unsubscribers = [u1, u2, u3, u4, u5];
+}
+
+// ── Profil-Modal ──
+
+function openProfileModal() {
+  const user = state.user;
+  if (!user) return;
+
+  const avatarHtml = user.photoURL
+    ? `<img src="${escHtml(user.photoURL)}" alt="" style="width:100%;height:100%;object-fit:cover">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--text-muted)">${getInitials(user.displayName)}</div>`;
+
+  const passphraseStatus = hasOfflineHash()
+    ? `<span style="color:var(--success);font-size:0.8rem">${t('profile.passphrase_ok')}</span>`
+    : `<span style="color:var(--warning);font-size:0.8rem">${t('profile.passphrase_missing')}</span>`;
+
+  const activeFestival = state.festivals.find(f => f.id === state.activeFestivalId);
+
+  $('profile-content').innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar">${avatarHtml}</div>
+      <div>
+        <div class="profile-name">${escHtml(user.displayName || '—')}</div>
+        <div class="profile-email">${escHtml(user.email || '')}</div>
+      </div>
+    </div>
+    <div class="profile-festival-row">
+      <div>
+        <div class="profile-festival-name">${escHtml(activeFestival?.name || state.activeFestivalId)}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${escHtml(activeFestival?.location || '')}</div>
+      </div>
+      <button id="btn-switch-festival" style="color:var(--accent-light);font-size:0.85rem;background:none;padding:0.25rem 0.5rem;flex-shrink:0">${t('profile.switch')}</button>
+    </div>
+    <div style="padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      ${passphraseStatus}
+    </div>
+    <button class="btn-logout-modal" id="btn-logout-modal">${t('profile.logout')}</button>
+  `;
+
+  $('btn-switch-festival')?.addEventListener('click', () => {
+    closeProfileModal();
+    openFestivalPanel();
+  });
+
+  $('btn-logout-modal')?.addEventListener('click', async () => {
+    closeProfileModal();
+    await logout();
+  });
+
+  $('profile-backdrop')?.classList.add('open');
+  $('profile-panel')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProfileModal() {
+  $('profile-backdrop')?.classList.remove('open');
+  $('profile-panel')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+$('profile-backdrop')?.addEventListener('click', closeProfileModal);
+
+// ── Festival-Panel ──
+
+function updateNavFestival() {
+  const btn = $('nav-festival');
+  if (!btn) return;
+  const f = state.festivals.find(f => f.id === state.activeFestivalId);
+  if (!f) { btn.style.display = 'none'; return; }
+  btn.textContent = f.name;
+  btn.style.display = '';
+}
+
+function openFestivalPanel() {
+  renderFestivalList();
+  $('festival-backdrop')?.classList.add('open');
+  $('festival-panel')?.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFestivalPanel() {
+  $('festival-backdrop')?.classList.remove('open');
+  $('festival-panel')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+$('festival-backdrop')?.addEventListener('click', closeFestivalPanel);
+
+function renderFestivalList() {
+  $('festival-content').innerHTML = `
+    <div class="panel-header" style="margin-bottom:1rem">
+      <div class="panel-artist-name" style="font-size:1.1rem">${t('festival.switch_title')}</div>
+    </div>
+    <div class="festival-list">
+      ${state.festivals.map(f => `
+        <button class="festival-list-item ${f.id === state.activeFestivalId ? 'active' : ''}"
+                data-fid="${escHtml(f.id)}">
+          <div class="festival-list-name">${escHtml(f.name)}</div>
+          <div class="festival-list-loc">${escHtml(f.location || '')}</div>
+          ${f.id === state.activeFestivalId ? '<span class="festival-active-check">✓</span>' : ''}
+        </button>`).join('')}
+    </div>
+  `;
+  $('festival-content').querySelectorAll('.festival-list-item').forEach(btn => {
+    btn.addEventListener('click', () => switchFestival(btn.dataset.fid));
+  });
+}
+
+async function switchFestival(festivalId) {
+  if (festivalId === state.activeFestivalId) { closeFestivalPanel(); return; }
+
+  state.unsubscribers.forEach(u => u?.());
+  state.unsubscribers = [];
+
+  state.activeFestivalId = festivalId;
+  state.artists          = [];
+  state.ratings          = [];
+  state.crew              = null;
+  state.crewView          = false;
+  state.activeDay         = null;
+
+  await saveActiveFestival(state.user.uid, festivalId);
+  startListeners();
+  render();
+  closeFestivalPanel();
 }
 
 // ── Render ──

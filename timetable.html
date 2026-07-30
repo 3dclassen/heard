@@ -19,6 +19,7 @@
 
     <nav class="nav">
       <a href="./index.html" class="nav-logo">H<span>D</span></a>
+      <button id="nav-festival" class="nav-festival" style="display:none"></button>
       <div class="nav-links">
         <a href="./index.html"     class="nav-link" data-i18n="nav.artists">Artists</a>
         <a href="./timetable.html" class="nav-link active" data-i18n="nav.timetable">Timetable</a>
@@ -44,6 +45,20 @@
     </main>
 
     <button id="btn-logout" style="display:none"></button>
+  </div>
+
+  <!-- ── Profil-Modal ── -->
+  <div class="panel-backdrop" id="profile-backdrop"></div>
+  <div class="panel" id="profile-panel" role="dialog" aria-modal="true" aria-label="Profil">
+    <div class="panel-handle"></div>
+    <div class="panel-content" id="profile-content"></div>
+  </div>
+
+  <!-- ── Festival Switcher Panel ── -->
+  <div class="panel-backdrop" id="festival-backdrop"></div>
+  <div class="panel" id="festival-panel" role="dialog" aria-modal="true" aria-label="Festival wechseln">
+    <div class="panel-handle"></div>
+    <div class="panel-content" id="festival-content"></div>
   </div>
 
   <script src="./version.js"></script>
