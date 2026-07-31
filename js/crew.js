@@ -451,7 +451,11 @@ function renderCrewMatch() {
   if (!el || !section) return;
 
   const myIds = myCrewUserIds();
-  const otherCrews = state.allCrews.filter(c => c.id !== state.crew?.id);
+  // Zusätzlich zur state.crew.id auch Crews ausschließen, die den eigenen User
+  // enthalten (Sicherheitsnetz gegen Mehrfach-Mitgliedschaften in alten/fehlerhaften Daten).
+  const otherCrews = state.allCrews.filter(c =>
+    c.id !== state.crew?.id && !(c.members || []).includes(state.user?.uid)
+  );
 
   if (otherCrews.length === 0) {
     el.innerHTML = `
