@@ -310,6 +310,19 @@ export async function createCrew(uid, name) {
   return ref.id;
 }
 
+// Wird nur gebraucht, wenn zwei Leute per Invite-Code eine Crew starten, ohne
+// dass zuvor jemand explizit "Crew erstellen" mit einem Namen aufgerufen hat —
+// sonst würde die Crew namenlos entstehen (UI zeigt dann "Unbekannte Crew").
+async function defaultCrewName(uidA, uidB) {
+  const [snapA, snapB] = await Promise.all([
+    getDoc(doc(db, "users", uidA)),
+    getDoc(doc(db, "users", uidB)),
+  ]);
+  const firstName = (snap) => (snap.exists() ? snap.data().display_name || "" : "").trim().split(/\s+/)[0];
+  const names = [firstName(snapA), firstName(snapB)].filter(Boolean);
+  return names.length ? names.join(" & ") : "Meine Crew";
+}
+
 export async function joinCrewByCode(code, uid) {
   const normalized = code.trim().toUpperCase();
   const inviteRef = doc(db, "crew_invites", normalized);
@@ -334,6 +347,7 @@ export async function joinCrewByCode(code, uid) {
   if (creatorSnap.empty) {
     const newRef = doc(collection(db, "crew_connections"));
     await setDoc(newRef, {
+      name: await defaultCrewName(invite.creator_uid, uid),
       members: [invite.creator_uid, uid],
       created_by: invite.creator_uid,
       created_at: serverTimestamp(),

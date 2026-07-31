@@ -399,7 +399,7 @@ function renderSharedFavorites() {
   section.style.display = '';
 
   el.innerHTML = shared.map(a => `
-    <div class="artist-card" style="cursor:default">
+    <div class="artist-card clickable" data-id="${esc(a.id)}">
       <div class="artist-name">${esc(a.name)}</div>
       <div class="artist-meta">
         <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
@@ -408,6 +408,21 @@ function renderSharedFavorites() {
         <span style="color:var(--seed);font-size:1rem">♥</span>
       </div>
     </div>`).join('');
+
+  el.querySelectorAll('.artist-card.clickable').forEach(card => {
+    card.addEventListener('click', () => goToArtist(card.dataset.id));
+  });
+}
+
+// Wie viele der Artists hat IRGENDEIN Mitglied der Crew bewertet/gehört (Aktivität der Crew als Ganzes).
+function crewActivity(memberIds) {
+  const rated = state.artists.filter(a =>
+    memberIds.some(uid => state.ratings.some(r => r.artist_id === a.id && r.user_id === uid && r.rating > 0))
+  ).length;
+  const heard = state.artists.filter(a =>
+    memberIds.some(uid => state.ratings.some(r => r.artist_id === a.id && r.user_id === uid && r.listened))
+  ).length;
+  return { rated, heard };
 }
 
 function jaccardScore(myIds, otherIds, ratings) {
@@ -456,10 +471,29 @@ function renderCrewMatch() {
 
   el.innerHTML = scored.map(({ crew, score }) => {
     const { quote, pct } = scoreQuote(score);
-    const n = (crew.members || []).length;
+    const members = crew.members || [];
+    const n = members.length;
     const memberLabel = n !== 1 ? t('crew.members') : t('crew.member');
+
+    const memberUsers = members.map(uid => state.users.find(u => u.uid === uid)).filter(Boolean);
+    const { rated: crewRated, heard: crewHeard } = crewActivity(members);
+
+    const membersHtml = memberUsers.map(u => {
+      const prog = ratingProgress(state.ratings, state.artists, u.uid);
+      return `
+        <div class="crew-rating-row">
+          <div class="crew-avatar">
+            ${u.photo_url
+              ? `<img src="${esc(u.photo_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+              : `<span style="font-size:0.6rem">${esc(getInitials(u.display_name))}</span>`}
+          </div>
+          <span class="crew-name">${esc(u.display_name?.split(' ')[0] || '?')}</span>
+          <span style="font-size:0.75rem;color:var(--text-dim)">${prog.rated}/${prog.total} ${t('crew.rated')} · ${prog.heard} ${t('crew.heard')}</span>
+        </div>`;
+    }).join('');
+
     return `
-      <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;gap:0.4rem">
+      <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;gap:0.5rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span class="artist-name">${esc(crew.name || 'Unbekannte Crew')}</span>
           <span style="font-size:0.75rem;color:var(--text-dim)">${n} ${memberLabel}</span>
@@ -467,6 +501,10 @@ function renderCrewMatch() {
         <div style="font-size:0.82rem;color:var(--text-muted);font-style:italic">
           „${esc(quote)}" <span style="color:var(--accent-light);font-style:normal;font-weight:600">(${pct}%)</span>
         </div>
+        <div style="font-size:0.75rem;color:var(--text-dim)">
+          ${crewRated}/${state.artists.length} ${t('crew.rated')} · ${crewHeard}/${state.artists.length} ${t('crew.heard')} (${t('crew.crew_total')})
+        </div>
+        ${membersHtml ? `<div class="crew-ratings" style="gap:0.5rem">${membersHtml}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -536,7 +574,7 @@ function renderCrewArtistList() {
     if (!crewHtml.trim()) return '';
 
     return `
-      <div class="artist-card" style="cursor:default;display:flex;flex-direction:column;align-items:flex-start;gap:0.75rem">
+      <div class="artist-card clickable" data-id="${esc(a.id)}" style="display:flex;flex-direction:column;align-items:flex-start;gap:0.75rem">
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
           <span class="artist-name">${esc(a.name)}</span>
           <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
@@ -548,6 +586,15 @@ function renderCrewArtistList() {
   if (!el.innerHTML.trim()) {
     el.innerHTML = `<div class="empty-state"><p>${t('crew.no_crew_ratings')}</p></div>`;
   }
+
+  el.querySelectorAll('.artist-card.clickable').forEach(card => {
+    card.addEventListener('click', () => goToArtist(card.dataset.id));
+  });
+}
+
+function goToArtist(artistId) {
+  if (!artistId) return;
+  window.location.href = `./index.html?artist=${encodeURIComponent(artistId)}`;
 }
 
 // ── Festival-Nav ──
