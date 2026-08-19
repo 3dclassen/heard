@@ -33,6 +33,7 @@ const TRANSLATIONS = {
     'filter.rated':       'Bewertet',
     'filter.favorites':   'Favoriten ♥',
     'filter.listened':    'Reingehört',
+    'filter.seen':        'Gesehen ✓',
     'filter.crew_commented': 'Crew-Kommentare 💬',
 
     // Sort
@@ -263,6 +264,7 @@ const TRANSLATIONS = {
     'filter.rated':      'Rated',
     'filter.favorites':  'Favorites ♥',
     'filter.listened':   'Listened',
+    'filter.seen':       'Seen ✓',
     'filter.crew_commented': 'Crew comments 💬',
 
     // Sort

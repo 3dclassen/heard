@@ -746,6 +746,7 @@ function filteredArtists() {
       if (state.filterStatus === 'rated'      && !(r?.rating > 0)) return false;
       if (state.filterStatus === 'favorites'  && !r?.want_to_see)  return false;
       if (state.filterStatus === 'listened'   && !r?.listened)     return false;
+      if (state.filterStatus === 'seen'       && !r?.seen)         return false;
       if (state.filterStatus === 'crew_commented' && !hasCrewComment(a.id)) return false;
     }
 
