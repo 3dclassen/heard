@@ -62,6 +62,26 @@ self.addEventListener('fetch', event => {
     return; // Browser-Standard verwenden
   }
 
+  // version.js ist die einzige Update-Signalquelle: sie treibt sowohl den Cache-Busting-
+  // Query-Param bei der SW-Registrierung (sw-register.js) als auch APP_VERSION hier selbst.
+  // Würde sie wie alle anderen Assets Cache-first bedient, würde ein alter Service Worker
+  // sich damit selbst am Leben erhalten — die Seite läse für immer die alte Versionsnummer,
+  // registriert daher immer wieder dieselbe sw.js-URL, und nie wird ein Update erkannt (das
+  // war der Grund für "Update kommt nicht an, egal ob aus-/eingeloggt"). Deshalb hier immer
+  // zuerst frisch vom Netz holen, HTTP-Cache explizit umgehen, nur offline auf Cache zurückfallen.
+  if (url.pathname.endsWith('/version.js')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   // Statische Assets: Cache first, dann Network
   event.respondWith(
     caches.match(event.request).then(cached => {
