@@ -665,6 +665,19 @@ input, textarea {
   margin-top: -0.25rem;
 }
 
+/* Nachbewertung — dieselbe Behandlung wie .toggle-section.on-festival, damit sie
+   sich wie der dritte Schritt derselben Reise anfühlt (Vorher/Auf/Nachher). */
+.rating-section.after-festival {
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+}
+
+.rating-section.after-festival .comment-textarea {
+  margin-top: 0.75rem;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;

@@ -919,6 +919,8 @@ function renderPanel(artist) {
   const currentFavorite = myRating?.want_to_see || false;
   const currentComment  = myRating?.comment   || '';
   const currentSeen     = myRating?.seen      || false;
+  const currentPostRating  = myRating?.post_rating  || 0;
+  const currentPostComment = myRating?.post_comment || '';
 
   const commentPlaceholder = randomQuote('commentPlaceholders');
 
@@ -994,6 +996,18 @@ function renderPanel(artist) {
       </div>
     </div>
 
+    <div class="rating-section after-festival" id="after-festival-section" style="display:${currentSeen ? '' : 'none'}">
+      <div class="toggle-context-label festival">${t('panel.after_festival')}</div>
+      <label>${t('panel.post_rating')}</label>
+      <div class="stars-input" id="post-stars-input">
+        ${[1,2,3,4,5].map(i =>
+          `<button class="star-btn ${i <= currentPostRating ? 'filled' : ''}" data-star="${i}" aria-label="${i} star${i>1?'s':''}">★</button>`
+        ).join('')}
+      </div>
+      <label>${t('panel.post_comment')}</label>
+      <textarea class="comment-textarea" id="post-comment-input" placeholder="${escHtml(commentPlaceholder)}">${escHtml(currentPostComment)}</textarea>
+    </div>
+
     <div class="comment-section">
       <label>${t('panel.comment')}</label>
       <textarea class="comment-textarea" id="comment-input" placeholder="${escHtml(commentPlaceholder)}">${escHtml(currentComment)}</textarea>
@@ -1007,15 +1021,33 @@ function renderPanel(artist) {
     </div>
   `;
 
-  let selectedRating = currentRating;
-  document.querySelectorAll('.star-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const val = parseInt(btn.dataset.star);
-      selectedRating = selectedRating === val ? 0 : val;
-      document.querySelectorAll('.star-btn').forEach((b, idx) => {
-        b.classList.toggle('filled', idx < selectedRating);
+  // Sterne-Reihe an einen Container gebunden statt global auf alle .star-btn im Panel
+  // zu lauschen — mit einer zweiten Reihe (Nachbewertung) würden sich sonst Klicks in
+  // beiden Reihen gegenseitig überschreiben (der Index lief vorher über ALLE Buttons).
+  function wireStars(containerId, initial) {
+    let selected = initial;
+    const container = document.getElementById(containerId);
+    if (!container) return { get: () => selected };
+    container.querySelectorAll('.star-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseInt(btn.dataset.star);
+        selected = selected === val ? 0 : val;
+        container.querySelectorAll('.star-btn').forEach((b, idx) => {
+          b.classList.toggle('filled', idx < selected);
+        });
       });
     });
+    return { get: () => selected };
+  }
+
+  const ratingStars     = wireStars('stars-input', currentRating);
+  const postRatingStars = wireStars('post-stars-input', currentPostRating);
+
+  // "Nach dem Festival"-Block live ein-/ausblenden, sobald "Gesehen" angehakt wird —
+  // ohne dafür erst speichern + neu öffnen zu müssen.
+  document.getElementById('toggle-seen')?.addEventListener('change', e => {
+    const section = document.getElementById('after-festival-section');
+    if (section) section.style.display = e.target.checked ? '' : 'none';
   });
 
   document.getElementById('btn-save')?.addEventListener('click', async () => {
@@ -1024,14 +1056,16 @@ function renderPanel(artist) {
     btn.textContent = t('panel.saving');
 
     const data = {
-      userId:      state.user.uid,
-      artistId:    artist.id,
-      festivalId:  state.activeFestivalId,
-      rating:      selectedRating,
-      comment:     document.getElementById('comment-input')?.value || '',
-      listened:    document.getElementById('toggle-listened')?.checked || false,
-      want_to_see: document.getElementById('toggle-favorite')?.checked || false,
-      seen:        document.getElementById('toggle-seen')?.checked || false
+      userId:       state.user.uid,
+      artistId:     artist.id,
+      festivalId:   state.activeFestivalId,
+      rating:       ratingStars.get(),
+      comment:      document.getElementById('comment-input')?.value || '',
+      listened:     document.getElementById('toggle-listened')?.checked || false,
+      want_to_see:  document.getElementById('toggle-favorite')?.checked || false,
+      seen:         document.getElementById('toggle-seen')?.checked || false,
+      post_rating:  postRatingStars.get(),
+      post_comment: document.getElementById('post-comment-input')?.value || ''
     };
 
     try {
@@ -1042,7 +1076,7 @@ function renderPanel(artist) {
         const cached = getCachedRatings();
         const id     = ratingId(data.userId, data.artistId);
         const idx    = cached.findIndex(r => r.id === id);
-        const entry  = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false };
+        const entry  = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false, post_rating: data.post_rating ?? 0, post_comment: data.post_comment ?? '' };
         if (idx >= 0) cached[idx] = entry; else cached.push(entry);
         state.ratings = cached;
         cacheRatings(cached);
@@ -1053,8 +1087,8 @@ function renderPanel(artist) {
       btn.classList.add('saved');
 
       // 80er-Quote als Toast je nach Rating
-      if (selectedRating === 5) showToast(randomQuote('fiveStars'));
-      if (selectedRating === 1) showToast(randomQuote('oneStar'));
+      if (data.rating === 5) showToast(randomQuote('fiveStars'));
+      if (data.rating === 1) showToast(randomQuote('oneStar'));
 
       render();
       setTimeout(closePanel, 800);

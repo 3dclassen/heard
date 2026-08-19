@@ -186,6 +186,8 @@ export async function saveRating({
   listened,
   want_to_see,
   seen,
+  post_rating,
+  post_comment,
 }) {
   const id = ratingId(userId, artistId);
   const ref = doc(db, "ratings", id);
@@ -198,6 +200,10 @@ export async function saveRating({
     listened: listened ?? false,
     want_to_see: want_to_see ?? false,
     seen: seen ?? false,
+    // Nachbewertung nach dem Festival — separat von rating/comment, damit die
+    // Vorab-Einschätzung beim Nachbewerten nicht überschrieben wird.
+    post_rating: post_rating ?? 0,
+    post_comment: post_comment ?? "",
     updated_at: serverTimestamp(),
   });
 }
