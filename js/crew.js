@@ -1,16 +1,20 @@
 // ── HEARD — Crew-Seite (crew.html) ──
 
 import {
-  auth, onAuthChange, ensureUserProfile, logout,
+  auth, onAuthChange, logout,
   onArtistsChange, onRatingsChange, onUsersChange,
   createCrew, joinCrewByCode, leaveCrew,
   onCrewChange, saveCrewName,
   onFestivalsChange, saveActiveFestival,
   onAllCrewsChange, getOrCreateMyInviteCode
 } from './firebase.js';
-import { isOnline } from './sync.js';
+import {
+  isOnline,
+  getCachedArtists, getCachedRatings, getCachedUsers,
+  cacheCrew, getCachedCrew
+} from './sync.js';
 import { sharedFavorites, ratingProgress } from './rating.js';
-import { hasOfflineHash } from './offline-auth.js';
+import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 let state = {
@@ -63,16 +67,50 @@ onAuthChange(async user => {
   state.user = user;
   if (!user) { window.location.href = './index.html'; return; }
 
-  state.userProfile = await ensureUserProfile(user);
-  state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
-  state.myInviteCode = await getOrCreateMyInviteCode(user.uid);
+  try {
+    // Offline-sicher: siehe offline-auth.js — kein hängender Firestore-Roundtrip
+    // wenn dieses users/{uid}-Doc lokal noch nicht gecacht ist.
+    state.userProfile = await ensureUserProfileOffline(user);
+    state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
+    // getOrCreateMyInviteCode() macht eine zusammengesetzte Query — hat offline ohne
+    // warmen Cache dasselbe Hänge-Risiko, daher hier ebenfalls überspringen.
+    state.myInviteCode = isOnline() ? await getOrCreateMyInviteCode(user.uid) : null;
+  } catch (err) {
+    console.error('[crew] onAuthChange Fehler:', err);
+  }
   setupNav();
   startListeners();
 });
 
-function setupNav() {
+// Nav-Avatar mit Initialen-Fallback: ohne photoURL (z.B. Microsoft-Login liefert oft
+// keins) oder wenn das Foto-URL 404ed, zeigte <img src=""> vorher das kaputte-Bild-Icon.
+function setNavAvatar(user) {
   const img = $('nav-avatar-img');
-  if (img && state.user?.photoURL) img.src = state.user.photoURL;
+  if (!img) return;
+  let fallback = document.getElementById('nav-avatar-fallback');
+  if (!fallback) {
+    fallback = document.createElement('div');
+    fallback.id = 'nav-avatar-fallback';
+    fallback.className = 'nav-avatar-fallback';
+    img.insertAdjacentElement('afterend', fallback);
+  }
+  fallback.textContent = getInitials(user?.displayName);
+
+  const showFallback = () => { img.style.display = 'none'; fallback.style.display = 'flex'; };
+  const showImg      = () => { img.style.display = '';     fallback.style.display = 'none'; };
+
+  if (user?.photoURL) {
+    img.onerror = showFallback;
+    img.src = user.photoURL;
+    showImg();
+  } else {
+    img.removeAttribute('src');
+    showFallback();
+  }
+}
+
+function setupNav() {
+  setNavAvatar(state.user);
   $('nav-avatar')?.addEventListener('click', openProfileModal);
   $('btn-logout')?.addEventListener('click', logout);
 
@@ -247,9 +285,22 @@ $('btn-regen-code')?.addEventListener('click', async () => {
 // ── Firestore Listener ──
 
 function startListeners() {
+  if (!isOnline()) {
+    // Ohne Live-Listener: gecachte Daten laden (Artists/Ratings/Users werden bereits
+    // aus index.html heraus gecacht, siehe sync.js) — vorher gab es hier gar keinen
+    // Offline-Zweig, wodurch Crew-Sterne/-Kommentare offline nie sichtbar wurden.
+    state.crew    = getCachedCrew();
+    state.artists = getCachedArtists();
+    state.ratings = getCachedRatings();
+    state.users   = getCachedUsers();
+    render();
+    return;
+  }
+
   const u1 = onCrewChange(state.user.uid, crew => {
     state.crew         = crew;
     state.filterMember = null;
+    cacheCrew(crew);
     render();
   });
 
@@ -402,6 +453,7 @@ function renderSharedFavorites() {
     <div class="artist-card clickable" data-id="${esc(a.id)}">
       <div class="artist-name">${esc(a.name)}</div>
       <div class="artist-meta">
+        ${a.time_start != null ? `<span style="font-size:0.75rem;color:var(--text-muted)">${formatTime(a.time_start)}${a.time_end != null ? ` – ${formatTime(a.time_end)}` : ''}</span>` : ''}
         <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
       </div>
       <div class="card-right">
@@ -581,7 +633,10 @@ function renderCrewArtistList() {
       <div class="artist-card clickable" data-id="${esc(a.id)}" style="display:flex;flex-direction:column;align-items:flex-start;gap:0.75rem">
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
           <span class="artist-name">${esc(a.name)}</span>
-          <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            ${a.time_start != null ? `<span style="font-size:0.75rem;color:var(--text-muted)">${formatTime(a.time_start)}${a.time_end != null ? ` – ${formatTime(a.time_end)}` : ''}</span>` : ''}
+            <span class="stage-badge ${a.stage}">${stageLabel(a.stage)}</span>
+          </div>
         </div>
         <div class="crew-ratings">${crewHtml}</div>
       </div>`;
@@ -739,6 +794,13 @@ profileBackdrop?.addEventListener('click', closeProfileModal);
 
 function stageLabel(stage) {
   return { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' }[stage] || stage;
+}
+
+function formatTime(decimal) {
+  if (decimal == null) return '?';
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function getInitials(name) {

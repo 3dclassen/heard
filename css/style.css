@@ -210,6 +210,17 @@ input, textarea {
   object-fit: cover;
 }
 
+.nav-avatar-fallback {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
 /* ── Main Content ── */
 
 .main {
@@ -460,6 +471,12 @@ input, textarea {
   min-width: 0;
   align-self: end;
   padding-bottom: 0.125rem;
+  /* Lange/mehrzeilige Kommentare (echte \n oder einfach viel Text) sauber nach 3
+     Zeilen abschneiden statt die Tile beliebig zu sprengen. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-comment.own {
@@ -923,6 +940,8 @@ input, textarea {
 .slot-artist {
   font-size: 1rem;
   font-weight: 600;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .conflict-badge {

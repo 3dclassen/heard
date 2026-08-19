@@ -6,6 +6,7 @@ const KEYS = {
   RATINGS:   'heard_ratings',
   USERS:     'heard_users',
   FESTIVAL:  'heard_festival',
+  CREW:      'heard_crew',
   PENDING:   'heard_pending_ratings',
   SYNCED_AT: 'heard_synced_at'
 };
@@ -50,6 +51,16 @@ export function cacheFestival(festival) {
 export function getCachedFestival() {
   try {
     return JSON.parse(localStorage.getItem(KEYS.FESTIVAL) || 'null');
+  } catch { return null; }
+}
+
+export function cacheCrew(crew) {
+  localStorage.setItem(KEYS.CREW, JSON.stringify(crew));
+}
+
+export function getCachedCrew() {
+  try {
+    return JSON.parse(localStorage.getItem(KEYS.CREW) || 'null');
   } catch { return null; }
 }
 

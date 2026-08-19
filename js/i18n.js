@@ -63,6 +63,7 @@ const TRANSLATIONS = {
     'toast.lineup_updated': 'Lineup aktualisiert ✓',
     'toast.offline_saved':  'Offline gespeichert — wird synchronisiert wenn du wieder online bist',
     'toast.save_error':     'Fehler beim Speichern',
+    'toast.render_error':   'Fehler beim Anzeigen — bitte neu laden',
     'toast.passphrase_saved': "Passphrase gespeichert. I'll be back — auch offline.",
     'toast.min_length':     'Bitte mindestens 6 Zeichen eingeben',
     'toast.festival_switched': 'Festival gewechselt:',
@@ -124,6 +125,7 @@ const TRANSLATIONS = {
     'timetable.view_label':  'Ansicht:',
     'timetable.view_mine':   'Nur ich',
     'timetable.view_crew':   '+ Crew',
+    'timetable.view_all':    'Alle Artists',
     'timetable.you':         'Du',
 
     // Crew-Seite
@@ -288,6 +290,7 @@ const TRANSLATIONS = {
     'toast.lineup_updated': 'Lineup updated ✓',
     'toast.offline_saved':  "Saved offline — will sync when you're back online",
     'toast.save_error':     'Error saving',
+    'toast.render_error':   'Error displaying — please reload',
     'toast.passphrase_saved': "Passphrase saved. I'll be back — offline too.",
     'toast.min_length':     'Please enter at least 6 characters',
     'toast.festival_switched': 'Festival switched:',
@@ -349,6 +352,7 @@ const TRANSLATIONS = {
     'timetable.view_label':   'View:',
     'timetable.view_mine':    'Just me',
     'timetable.view_crew':    '+ Crew',
+    'timetable.view_all':     'All artists',
     'timetable.you':          'You',
 
     // Crew page

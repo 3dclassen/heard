@@ -1,13 +1,13 @@
 // ── HEARD — Timetable-Logik & UI (timetable.html) ──
 
 import {
-  auth, onAuthChange, ensureUserProfile,
+  auth, onAuthChange,
   onArtistsChange, onRatingsChange, onCrewChange, onUsersChange, logout,
   onFestivalsChange, saveActiveFestival
 } from './firebase.js';
 import { getCachedArtists, getCachedRatings, isOnline } from './sync.js';
 import { myFavorites, crewFavorites, votersForArtist, getMyRating } from './rating.js';
-import { hasOfflineHash } from './offline-auth.js';
+import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -22,7 +22,8 @@ const DAY_LABELS = {
 };
 
 const MIN_RATING_KEY = 'heard_timetable_min_rating';
-const CREW_VIEW_KEY  = 'heard_timetable_crew_view';
+const CREW_VIEW_KEY  = 'heard_timetable_crew_view'; // Legacy-Key (Boolean), für Migration
+const VIEW_MODE_KEY  = 'heard_timetable_view_mode';
 
 function loadMinRating() {
   const v = parseInt(localStorage.getItem(MIN_RATING_KEY), 10);
@@ -33,12 +34,15 @@ function saveMinRating(v) {
   localStorage.setItem(MIN_RATING_KEY, String(v));
 }
 
-function loadCrewView() {
-  return localStorage.getItem(CREW_VIEW_KEY) === '1';
+// 'mine' | 'crew' | 'all' — migriert transparent vom alten Boolean-Flag (crewView).
+function loadViewMode() {
+  const v = localStorage.getItem(VIEW_MODE_KEY);
+  if (v === 'mine' || v === 'crew' || v === 'all') return v;
+  return localStorage.getItem(CREW_VIEW_KEY) === '1' ? 'crew' : 'mine';
 }
 
-function saveCrewView(v) {
-  localStorage.setItem(CREW_VIEW_KEY, v ? '1' : '0');
+function saveViewMode(v) {
+  localStorage.setItem(VIEW_MODE_KEY, v);
 }
 
 let state = {
@@ -50,9 +54,10 @@ let state = {
   users:            [],
   festivals:        [],
   activeDay:        null,
+  availableDays:    [],
   activeFestivalId: 'modem-2026',
   minRating:        loadMinRating(),
-  crewView:         loadCrewView(),
+  viewMode:         loadViewMode(),
   unsubscribers:    []
 };
 
@@ -66,15 +71,49 @@ onAuthChange(async user => {
     window.location.href = './index.html';
     return;
   }
-  state.userProfile = await ensureUserProfile(user);
-  state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
-  setupNav();
-  startListeners();
+  try {
+    // Offline-sicher: siehe offline-auth.js — kein hängender Firestore-Roundtrip
+    // wenn dieses users/{uid}-Doc lokal noch nicht gecacht ist.
+    state.userProfile = await ensureUserProfileOffline(user);
+    state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
+    setupNav();
+    startListeners();
+  } catch (err) {
+    console.error('[timetable] onAuthChange Fehler:', err);
+    setupNav();
+    startListeners();
+  }
 });
 
-function setupNav() {
+// Nav-Avatar mit Initialen-Fallback: ohne photoURL (z.B. Microsoft-Login liefert oft
+// keins) oder wenn das Foto-URL 404ed, zeigte <img src=""> vorher das kaputte-Bild-Icon.
+function setNavAvatar(user) {
   const img = $('nav-avatar-img');
-  if (img && state.user?.photoURL) img.src = state.user.photoURL;
+  if (!img) return;
+  let fallback = document.getElementById('nav-avatar-fallback');
+  if (!fallback) {
+    fallback = document.createElement('div');
+    fallback.id = 'nav-avatar-fallback';
+    fallback.className = 'nav-avatar-fallback';
+    img.insertAdjacentElement('afterend', fallback);
+  }
+  fallback.textContent = getInitials(user?.displayName);
+
+  const showFallback = () => { img.style.display = 'none'; fallback.style.display = 'flex'; };
+  const showImg      = () => { img.style.display = '';     fallback.style.display = 'none'; };
+
+  if (user?.photoURL) {
+    img.onerror = showFallback;
+    img.src = user.photoURL;
+    showImg();
+  } else {
+    img.removeAttribute('src');
+    showFallback();
+  }
+}
+
+function setupNav() {
+  setNavAvatar(state.user);
   $('nav-avatar')?.addEventListener('click', openProfileModal);
   $('nav-festival')?.addEventListener('click', openFestivalPanel);
   $('btn-logout')?.addEventListener('click', logout);
@@ -100,7 +139,7 @@ function startListeners() {
   });
   const u3 = onCrewChange(state.user.uid, crew => {
     state.crew = crew;
-    if (!isCrewViewAvailable()) state.crewView = false;
+    if (state.viewMode === 'crew' && !isCrewViewAvailable()) state.viewMode = 'mine';
     render();
   });
   const u4 = onUsersChange(users => {
@@ -230,7 +269,7 @@ async function switchFestival(festivalId) {
   state.artists          = [];
   state.ratings          = [];
   state.crew              = null;
-  state.crewView          = false;
+  state.viewMode           = 'mine';
   state.activeDay         = null;
 
   await saveActiveFestival(state.user.uid, festivalId);
@@ -248,9 +287,14 @@ function isCrewViewAvailable() {
 function render() {
   if (!state.user) return;
 
-  const favorites = (state.crewView && isCrewViewAvailable())
-    ? crewFavorites(state.ratings, state.artists, state.crew.members, state.minRating)
-    : myFavorites(state.ratings, state.artists, state.user.uid, state.minRating);
+  let favorites;
+  if (state.viewMode === 'all') {
+    favorites = state.artists;
+  } else if (state.viewMode === 'crew' && isCrewViewAvailable()) {
+    favorites = crewFavorites(state.ratings, state.artists, state.crew.members, state.minRating);
+  } else {
+    favorites = myFavorites(state.ratings, state.artists, state.user.uid, state.minRating);
+  }
   const hasTimestamps = favorites.some(a => a.time_start != null);
 
   if (!hasTimestamps) {
@@ -264,6 +308,7 @@ function render() {
 // ── Sterne-Schwelle: welche Artists zusätzlich zu ♥-Favoriten aufgenommen werden ──
 
 function renderMinRatingControl() {
+  if (state.viewMode === 'all') return ''; // Schwelle irrelevant, wenn eh alle Artists gezeigt werden
   const options = [0, 1, 2, 3, 4, 5];
   return `
     <div class="rating-tabs">
@@ -276,7 +321,11 @@ function renderMinRatingControl() {
 }
 
 function wireMinRatingControl(container) {
-  container.querySelectorAll('.rating-tab').forEach(btn => {
+  // Nur die "data-min"-Buttons — der Container teilt sich die .rating-tab-Klasse mit
+  // dem View-Control darunter, ein zu breiter Selektor würde dessen Klicks hier auch
+  // (fälschlich) als Rating-Schwelle interpretieren (dataset.min wäre dann undefined
+  // -> NaN -> stiller Reset auf den Default).
+  container.querySelectorAll('.rating-tab[data-min]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.minRating = parseInt(btn.dataset.min, 10);
       saveMinRating(state.minRating);
@@ -285,23 +334,25 @@ function wireMinRatingControl(container) {
   });
 }
 
-// ── Ansicht: nur meine Auswahl oder + Crew-Picks ──
+// ── Ansicht: nur meine Auswahl, + Crew-Picks, oder kompletter Timetable ──
 
 function renderViewControl() {
-  if (!isCrewViewAvailable()) return '';
+  const showCrew = isCrewViewAvailable();
   return `
     <div class="rating-tabs">
       <span class="rating-tabs-label">${t('timetable.view_label')}</span>
-      <button class="rating-tab ${!state.crewView ? 'active' : ''}" data-view="mine">${t('timetable.view_mine')}</button>
-      <button class="rating-tab ${state.crewView ? 'active' : ''}" data-view="crew">${t('timetable.view_crew')}</button>
+      <button class="rating-tab" data-view="mine">${t('timetable.view_mine')}</button>
+      ${showCrew ? `<button class="rating-tab" data-view="crew">${t('timetable.view_crew')}</button>` : ''}
+      <button class="rating-tab" data-view="all">${t('timetable.view_all')}</button>
     </div>`;
 }
 
 function wireViewControl(container) {
-  container.querySelectorAll('[data-view]').forEach(btn => {
+  container.querySelectorAll('.rating-tab[data-view]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === state.viewMode);
     btn.addEventListener('click', () => {
-      state.crewView = btn.dataset.view === 'crew';
-      saveCrewView(state.crewView);
+      state.viewMode = btn.dataset.view;
+      saveViewMode(state.viewMode);
       render();
     });
   });
@@ -343,6 +394,7 @@ function getInitials(name) {
 function renderFavoritesList(favorites) {
   const container = $('timetable-content');
   if (!container) return;
+  state.availableDays = []; // keine Day-Tabs hier -> Swipe soll nicht greifen
 
   if (favorites.length === 0) {
     container.innerHTML = `
@@ -394,6 +446,7 @@ function renderTimetableView(favorites) {
   // Tage ermitteln die Favoriten haben
   const availableDays = [...new Set(favorites.map(a => a.day).filter(Boolean))]
     .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+  state.availableDays = availableDays; // für Swipe-Navigation (setupDaySwipe)
 
   if (availableDays.length === 0) {
     renderFavoritesList(favorites);
@@ -467,6 +520,44 @@ function goToArtist(artistId) {
   window.location.href = `./index.html?artist=${encodeURIComponent(artistId)}`;
 }
 
+// ── Swipe-Navigation zwischen Tagen ──
+// Einmalig auf den Container gebunden (der Node selbst überlebt render()-Aufrufe,
+// nur sein innerHTML wird ersetzt) — kein Wrap-Around an den Rändern.
+
+function setupDaySwipe() {
+  const container = $('timetable-content');
+  if (!container) return;
+
+  const SWIPE_THRESHOLD = 50;
+  let startX = 0, startY = 0, tracking = false;
+
+  container.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  container.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Muss überwiegend horizontal sein, sonst normales vertikales Scrollen nicht stören
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (state.availableDays.length < 2) return;
+
+    const idx = state.availableDays.indexOf(state.activeDay);
+    if (idx === -1) return;
+    const nextIdx = dx < 0 ? idx + 1 : idx - 1; // nach links wischen = nächster Tag
+    if (nextIdx < 0 || nextIdx >= state.availableDays.length) return; // Ränder: kein Wrap-Around
+
+    state.activeDay = state.availableDays[nextIdx];
+    render();
+  }, { passive: true });
+}
+
 // ── Konflikt-Erkennung ──
 
 function findConflicts(artists) {
@@ -507,3 +598,4 @@ function escHtml(str) {
 
 applyTranslations();
 setupLangToggle();
+setupDaySwipe();

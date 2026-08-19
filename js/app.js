@@ -2,7 +2,7 @@
 
 import {
   auth, db,
-  loginWithGoogle, loginWithMicrosoft, logout, onAuthChange, ensureUserProfile,
+  loginWithGoogle, loginWithMicrosoft, logout, onAuthChange,
   onArtistsChange, onRatingsChange, onUsersChange, onFestivalsChange,
   saveRating, ratingId, saveOfflineAuthHash, saveOfflineAuthDismissed, saveActiveFestival, saveFestival
 } from './firebase.js';
@@ -19,7 +19,8 @@ import {
   setupPassphrase, verifyPassphrase,
   hasOfflineHash, hasCachedUser, getCachedUser, cacheUserForOffline,
   generatePassphraseSuggestion, importOfflineHash,
-  hasDismissedPassphrasePrompt, dismissPassphrasePrompt, importDismissed
+  hasDismissedPassphrasePrompt, dismissPassphrasePrompt, importDismissed,
+  ensureUserProfileOffline
 } from './offline-auth.js';
 
 import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
@@ -156,41 +157,57 @@ navAvatar?.addEventListener('click', () => {
 
 onAuthChange(async user => {
   state.user = user;
-  if (user) {
-    cacheUserForOffline(user);
-    state.userProfile = await ensureUserProfile(user);
-    state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
-    showApp();
-    startListeners();
-    await syncOfflineRatings();
+  try {
+    if (user) {
+      cacheUserForOffline(user);
+      // Offline-sicher: macht keinen hängenden Firestore-Roundtrip wenn wir offline
+      // sind und dieses users/{uid}-Doc noch nicht lokal gecacht ist (neues Gerät,
+      // geleerter Cache) — genau das hat die App vorher komplett blockiert, bevor
+      // überhaupt die Passphrase-Eingabe erreicht wurde.
+      state.userProfile = await ensureUserProfileOffline(user);
+      state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
+      showApp();
+      startListeners();
+      await syncOfflineRatings();
 
-    // Falls lokal kein Hash (mehr) da ist, aber schon einer in Firebase hinterlegt
-    // wurde (z.B. Storage geleert, neues Gerät) — den bestehenden übernehmen statt
-    // eine neue Passphrase vorzuschlagen.
-    if (!hasOfflineHash() && state.userProfile?.offline_auth_hash) {
-      importOfflineHash(state.userProfile.offline_auth_hash);
-    }
+      // Falls lokal kein Hash (mehr) da ist, aber schon einer in Firebase hinterlegt
+      // wurde (z.B. Storage geleert, neues Gerät) — den bestehenden übernehmen statt
+      // eine neue Passphrase vorzuschlagen.
+      if (!hasOfflineHash() && state.userProfile?.offline_auth_hash) {
+        importOfflineHash(state.userProfile.offline_auth_hash);
+      }
 
-    // Dasselbe für den Dismissed-Status: falls lokaler Storage verloren ging (z.B.
-    // iOS-PWA-Eviction), aber der User den Prompt schon mal bewusst weggeklickt hat,
-    // das aus Firebase übernehmen statt den Prompt erneut zu zeigen.
-    if (!hasDismissedPassphrasePrompt() && state.userProfile?.offline_auth_dismissed) {
-      importDismissed(true);
-    }
+      // Dasselbe für den Dismissed-Status: falls lokaler Storage verloren ging (z.B.
+      // iOS-PWA-Eviction), aber der User den Prompt schon mal bewusst weggeklickt hat,
+      // das aus Firebase übernehmen statt den Prompt erneut zu zeigen.
+      if (!hasDismissedPassphrasePrompt() && state.userProfile?.offline_auth_dismissed) {
+        importDismissed(true);
+      }
 
-    // Passphrase-Setup nach kurzem Delay vorschlagen — aber nur wenn wirklich noch
-    // keine eingerichtet ist UND der User den Vorschlag nicht schon mal weggeklickt hat
-    // (sonst würde bei jedem Login erneut eine neue Vorschlags-Passphrase auftauchen).
-    if (!hasOfflineHash() && !hasDismissedPassphrasePrompt()) {
-      setTimeout(() => showPassphraseSetup(), 1500);
+      // Passphrase-Setup nach kurzem Delay vorschlagen — aber nur wenn wirklich noch
+      // keine eingerichtet ist UND der User den Vorschlag nicht schon mal weggeklickt hat
+      // (sonst würde bei jedem Login erneut eine neue Vorschlags-Passphrase auftauchen).
+      if (isOnline() && !hasOfflineHash() && !hasDismissedPassphrasePrompt()) {
+        setTimeout(() => showPassphraseSetup(), 1500);
+      }
+    } else {
+      stopListeners();
+      // Offline + gecachte Session vorhanden → Passphrase-Login anbieten
+      if (!isOnline() && hasCachedUser() && hasOfflineHash()) {
+        showOfflineLogin();
+      } else if (!isOnline() && hasCachedUser()) {
+        // Kein Hash eingerichtet — gecachte Daten laden aber Hinweis zeigen
+        loadOfflineWithoutAuth();
+      } else {
+        showLogin();
+      }
     }
-  } else {
-    stopListeners();
-    // Offline + gecachte Session vorhanden → Passphrase-Login anbieten
-    if (!isOnline() && hasCachedUser() && hasOfflineHash()) {
-      showOfflineLogin();
-    } else if (!isOnline() && hasCachedUser()) {
-      // Kein Hash eingerichtet — gecachte Daten laden aber Hinweis zeigen
+  } catch (err) {
+    // Sicherheitsnetz: irgendein unerwarteter Fehler im Login-Flow darf die App nie
+    // wieder komplett hängen lassen — offline notfalls ohne Auth weiterladen, online
+    // wenigstens den Login-Screen zeigen statt eines leeren/eingefrorenen Bildschirms.
+    console.error('[app] onAuthChange Fehler:', err);
+    if (!isOnline() && hasCachedUser()) {
       loadOfflineWithoutAuth();
     } else {
       showLogin();
@@ -204,13 +221,39 @@ function showLogin() {
   appShell.classList.remove('visible');
 }
 
+// Nav-Avatar mit Initialen-Fallback: ohne photoURL (z.B. Microsoft-Login liefert oft
+// keins) oder wenn das Foto-URL 404ed, zeigte <img src=""> vorher das kaputte-Bild-Icon.
+function setNavAvatar(user) {
+  if (!navAvatarImg) return;
+  let fallback = document.getElementById('nav-avatar-fallback');
+  if (!fallback) {
+    fallback = document.createElement('div');
+    fallback.id = 'nav-avatar-fallback';
+    fallback.className = 'nav-avatar-fallback';
+    navAvatarImg.insertAdjacentElement('afterend', fallback);
+  }
+  fallback.textContent = getInitials(user?.displayName);
+
+  const showFallback = () => { navAvatarImg.style.display = 'none'; fallback.style.display = 'flex'; };
+  const showImg      = () => { navAvatarImg.style.display = '';     fallback.style.display = 'none'; };
+
+  if (user?.photoURL) {
+    navAvatarImg.onerror = showFallback;
+    navAvatarImg.src = user.photoURL;
+    showImg();
+  } else {
+    navAvatarImg.removeAttribute('src');
+    showFallback();
+  }
+}
+
 function showApp() {
   loginScreen.style.display = 'none';
   offlineLoginScreen.style.display = 'none';
   appShell.classList.add('visible');
 
   if (state.user) {
-    if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
+    setNavAvatar(state.user);
     const adminLink = $('nav-admin');
     if (adminLink && state.userProfile?.role === 'admin') {
       adminLink.style.display = '';
@@ -248,7 +291,6 @@ function loadOfflineWithoutAuth() {
   state.ratings = getCachedRatings();
   state.users   = getCachedUsers();
   showApp();
-  if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
   render();
   openArtistFromDeepLink();
   showToast(t('offline.banner'), 'error');
@@ -269,7 +311,6 @@ $('btn-offline-login')?.addEventListener('click', async () => {
     state.ratings = getCachedRatings();
     state.users   = getCachedUsers();
     showApp();
-    if (navAvatarImg) navAvatarImg.src = state.user.photoURL || '';
     render();
     openArtistFromDeepLink();
     showToast(randomQuote('offlineLoginSuccess'), 'success');
@@ -729,7 +770,20 @@ function sortArtists(artists) {
   }
 }
 
+// Wrapper: ein Fehler in renderArtistList() darf die Liste nie stumm einfrieren lassen
+// (z.B. so gewirkt hätte der Auth-Hänger aus Punkt 1: Klicks auf Filter-Pills änderten
+// den State sichtbar per Klasse, aber die Liste darunter aktualisierte sich nie, weil
+// render() irgendwo unbehandelt geworfen hat). Jetzt zumindest sichtbar statt unsichtbar.
 function render() {
+  try {
+    renderArtistList();
+  } catch (err) {
+    console.error('[app] render() Fehler:', err);
+    showToast(t('toast.render_error'), 'error');
+  }
+}
+
+function renderArtistList() {
   const artists  = filteredArtists();
   const countEl  = document.getElementById('artist-count-text');
   if (countEl) countEl.textContent = `${artists.length} Artists`;

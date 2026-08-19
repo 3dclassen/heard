@@ -1,5 +1,8 @@
 // ── HEARD — Offline-Auth (Passphrase) ──
 
+import { ensureUserProfile } from './firebase.js';
+import { isOnline } from './sync.js';
+
 const LS_HASH      = 'heard_offline_hash';
 const LS_USER      = 'heard_user_cache';
 const LS_DISMISSED = 'heard_passphrase_prompt_dismissed';
@@ -67,6 +70,22 @@ export function cacheUserForOffline(user) {
     email:       user.email       || '',
     photoURL:    user.photoURL    || ''
   }));
+}
+
+// Wie ensureUserProfile(), aber offline-sicher: macht KEINEN Firestore-Roundtrip wenn
+// wir offline sind (der würde ohne warmen IndexedDB-Cache für dieses users/{uid}-Doc
+// hängen/failen und, weil er ungeprüft awaited wird, den kompletten Login-Flow blockieren
+// — das war der eigentliche Bug hinter "App geht offline nicht", unabhängig von der
+// Passphrase). Gibt offline einfach null zurück; der restliche Code liest state.userProfile
+// überall defensiv mit ?. aus, das trägt also problemlos.
+export async function ensureUserProfileOffline(user) {
+  if (!isOnline()) return null;
+  try {
+    return await ensureUserProfile(user);
+  } catch (err) {
+    console.warn('[offline-auth] ensureUserProfile fehlgeschlagen, fahre ohne Profil fort:', err);
+    return null;
+  }
 }
 
 export function generatePassphraseSuggestion(userName, artists, ratings, userId) {
