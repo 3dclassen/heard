@@ -24,6 +24,7 @@ import {
 } from './offline-auth.js';
 
 import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
+import { forceUpdate } from './sw-register.js';
 
 // ── Konstante ──
 
@@ -1184,6 +1185,10 @@ function openProfileModal() {
         ${hasOfflineHash() ? t('profile.passphrase_change') : t('profile.passphrase_setup')}
       </button>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--text-muted)">
+      <span>${t('profile.app_version')} ${APP_VERSION}</span>
+      <button id="btn-force-update" style="color:var(--accent-light);font-size:0.8rem;background:none;padding:0.25rem 0.5rem">${t('profile.force_update')}</button>
+    </div>
     <button class="btn-logout-modal" id="btn-logout-modal">${t('profile.logout')}</button>
   `;
 
@@ -1192,6 +1197,13 @@ function openProfileModal() {
   $('btn-change-passphrase')?.addEventListener('click', () => {
     closeProfileModal();
     setTimeout(() => showPassphraseSetup(), 200);
+  });
+
+  $('btn-force-update')?.addEventListener('click', () => {
+    // Garantierter Reset — siehe sw-register.js:forceUpdate(). Kein Bestätigungsdialog
+    // nötig, das Schlimmste was passiert ist ein Reload; Ratings/Offline-Queue liegen in
+    // localStorage und sind davon nicht betroffen (nur Firestore-/Datei-Caches werden geleert).
+    forceUpdate();
   });
 
   $('btn-logout-modal')?.addEventListener('click', async () => {

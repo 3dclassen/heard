@@ -16,6 +16,7 @@ import {
 import { sharedFavorites, ratingProgress } from './rating.js';
 import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
+import { forceUpdate } from './sw-register.js';
 
 let state = {
   user:             null,
@@ -764,6 +765,10 @@ function openProfileModal() {
     <div style="padding:0.75rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
       ${passphraseStatus}
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--text-muted)">
+      <span>${t('profile.app_version')} ${self.APP_VERSION}</span>
+      <button id="btn-force-update" style="color:var(--accent-light);font-size:0.8rem;background:none;padding:0.25rem 0.5rem">${t('profile.force_update')}</button>
+    </div>
     <button class="btn-logout-modal" id="btn-logout-modal">${t('profile.logout')}</button>
   `;
 
@@ -771,6 +776,8 @@ function openProfileModal() {
     closeProfileModal();
     openFestivalPanel();
   });
+
+  $('btn-force-update')?.addEventListener('click', () => forceUpdate());
 
   $('btn-logout-modal')?.addEventListener('click', async () => {
     closeProfileModal();

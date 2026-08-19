@@ -1162,6 +1162,42 @@ input, textarea {
   color: var(--danger);
 }
 
+/* ── Update-Banner (direkter Versions-Check, unabhängig vom SW-Lifecycle) ──
+   Bewusst oben, fixiert, nicht selbst schließbar — soll nicht übersehen werden, anders
+   als der kurzlebige Toast unten. Siehe js/sw-register.js:checkVersionMismatch(). */
+.sw-update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.625rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.sw-update-banner button {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.875rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sw-update-banner button:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+
 /* ── Page Title ── */
 
 .page-title {

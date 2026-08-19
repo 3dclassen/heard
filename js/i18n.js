@@ -76,6 +76,8 @@ const TRANSLATIONS = {
     // SW-Update-Toast
     'sw.updating':       'Aktualisiere App…',
     'sw.update_waiting': 'Update verfügbar — wird nach dem Speichern geladen',
+    'sw.new_version':    'Neue Version verfügbar:',
+    'sw.update_now':     'Jetzt aktualisieren',
 
     // Leere Zustände
     'empty.no_artists_admin':  'Noch keine Artists geladen. Ein Admin muss zuerst den Scraper ausführen.',
@@ -100,6 +102,8 @@ const TRANSLATIONS = {
     'profile.passphrase_missing': '⚠ Noch keine Offline-Passphrase',
     'profile.passphrase_change':  'Ändern',
     'profile.passphrase_setup':   'Einrichten',
+    'profile.app_version':        'App-Version',
+    'profile.force_update':       'Cache leeren & neu laden',
     'profile.logout':             'Ausloggen',
 
     // Festival-Switcher
@@ -307,6 +311,8 @@ const TRANSLATIONS = {
     // SW-Update-Toast
     'sw.updating':       'Updating app…',
     'sw.update_waiting': "Update available — will load once you're done",
+    'sw.new_version':    'New version available:',
+    'sw.update_now':     'Update now',
 
     // Empty states
     'empty.no_artists_admin':  'No artists loaded yet. An admin needs to run the scraper first.',
@@ -331,6 +337,8 @@ const TRANSLATIONS = {
     'profile.passphrase_missing': '⚠ No offline passphrase yet',
     'profile.passphrase_change':  'Change',
     'profile.passphrase_setup':   'Set up',
+    'profile.app_version':        'App version',
+    'profile.force_update':       'Clear cache & reload',
     'profile.logout':             'Log out',
 
     // Festival switcher
