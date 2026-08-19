@@ -2110,3 +2110,139 @@ details[open] > .faq-question::after {
   border-top: 1px solid var(--border);
   font-style: italic;
 }
+
+/* ── Recap-Seite ── */
+
+.stat-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--tile-border-radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-tile-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+
+.stat-tile-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.recap-list {
+  margin-bottom: 1.5rem;
+}
+
+.recap-list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.recap-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 0.75rem 0;
+}
+
+/* Stage-Zeit-Balken — wiederverwendet dieselben --hive/--swamp/--seed-Farben wie
+   .stage-badge überall sonst in der App, bewusst keine eigene Palette. */
+.stage-bars {
+  margin-bottom: 1.5rem;
+}
+
+.stage-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.5rem;
+}
+
+.stage-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.stage-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+}
+
+.stage-bar-fill.hive  { background: var(--hive); }
+.stage-bar-fill.swamp { background: var(--swamp); }
+.stage-bar-fill.seed  { background: var(--seed); }
+
+.stage-bar-value {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 3.5em;
+  text-align: right;
+}
+
+.recap-avg-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.75rem 0 1.5rem;
+}
+
+.recap-avg-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 0.375rem;
+  text-align: center;
+}
+
+.recap-avg-arrow {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+}
+
+.recap-leaderboard {
+  margin-bottom: 1.5rem;
+}
+
+.recap-leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.recap-leaderboard-row.first .recap-rank {
+  color: var(--star);
+}
+
+.recap-rank {
+  width: 1.5em;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.recap-leaderboard-value {
+  font-weight: 600;
+  color: var(--accent-light);
+}

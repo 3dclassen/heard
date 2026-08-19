@@ -94,3 +94,69 @@ export function ratingProgress(ratings, artists, userId) {
   const total    = artists.length;
   return { heard, rated, total };
 }
+
+// ── Recap (Statistik-Zusammenfassung, js/recap.js) ──
+
+function average(nums) {
+  const positive = nums.filter(n => n > 0);
+  if (positive.length === 0) return 0;
+  return positive.reduce((a, b) => a + b, 0) / positive.length;
+}
+
+/**
+ * Kernstatistik für einen einzelnen User — Basis sowohl für die persönliche Recap-Ansicht
+ * als auch für jede Zeile im Crew-Leaderboard (crewRecap() ruft das pro Mitglied auf).
+ * time_start/time_end auf Artists sind bereits so konzipiert, dass Sets nach Mitternacht
+ * Werte > 24 haben (z.B. 25.5 = 1:30 Uhr) — dieselbe Konvention wie in timetable.js
+ * findConflicts(), also keine Modulo-/Wrap-Sonderbehandlung nötig.
+ */
+export function personalRecap(ratings, artists, userId) {
+  const myRatings   = ratings.filter(r => r.user_id === userId);
+  const seenIds     = new Set(myRatings.filter(r => r.seen).map(r => r.artist_id));
+  const seenArtists = artists.filter(a => seenIds.has(a.id));
+  const withTime    = seenArtists.filter(a => a.time_start != null && a.time_end != null);
+
+  const byDay = {};
+  seenArtists.forEach(a => {
+    if (!a.day) return;
+    byDay[a.day] = (byDay[a.day] || 0) + 1;
+  });
+
+  const hoursByStage = {};
+  withTime.forEach(a => {
+    hoursByStage[a.stage] = (hoursByStage[a.stage] || 0) + (a.time_end - a.time_start);
+  });
+
+  const postRated = myRatings.filter(r => r.post_rating > 0);
+  const surprises = postRated
+    .map(r => ({
+      artistId: r.artist_id,
+      before:   r.rating || 0,
+      after:    r.post_rating,
+      delta:    r.post_rating - (r.rating || 0),
+    }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, 3);
+
+  return {
+    seenCount:      seenArtists.length,
+    totalCount:     artists.length,
+    ratedCount:     myRatings.filter(r => r.rating > 0).length,
+    favoritesCount: myRatings.filter(r => r.want_to_see).length,
+    postRatedCount: postRated.length,
+    hasTimeData:    withTime.length > 0,
+    totalHours:     withTime.reduce((sum, a) => sum + (a.time_end - a.time_start), 0),
+    byDay,
+    hoursByStage,
+    avgRatingBefore: average(postRated.map(r => r.rating || 0)),
+    avgRatingAfter:  average(postRated.map(r => r.post_rating)),
+    surprises,
+  };
+}
+
+/**
+ * Crew-Leaderboard: dieselbe Kernstatistik pro Mitglied, keine eigene Logik.
+ */
+export function crewRecap(ratings, artists, userIds) {
+  return userIds.map(userId => ({ userId, ...personalRecap(ratings, artists, userId) }));
+}

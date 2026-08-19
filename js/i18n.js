@@ -6,6 +6,7 @@ const TRANSLATIONS = {
     'nav.artists':   'Artists',
     'nav.timetable': 'Timetable',
     'nav.crew':      'Crew',
+    'nav.recap':     'Recap',
     'nav.help':      'Hilfe',
     'nav.admin':     'Admin',
 
@@ -234,6 +235,24 @@ const TRANSLATIONS = {
     // Lade-Zustände
     'loading.artists': 'Lade Artists...',
     'loading.generic': 'Lade...',
+
+    // Recap-Seite
+    'recap.title':            'Dein Recap',
+    'recap.seen':             'Gesehen',
+    'recap.rated':            'Bewertet',
+    'recap.favorites':        'Favoriten',
+    'recap.post_rated':       'Nachbewertet',
+    'recap.hours_total':      'Stunden auf der Fläche',
+    'recap.by_day':           'Nach Tag',
+    'recap.by_stage':         'Nach Stage',
+    'recap.rating_before':    'Vorher',
+    'recap.rating_after':     'Nachher',
+    'recap.surprises':        'Größte Überraschungen',
+    'recap.no_surprises':     'Noch keine Nachbewertungen zum Vergleichen.',
+    'recap.no_time_data':     'Noch keine Zeitplan-Daten für dieses Festival — Stunden/Tag/Stage-Statistik folgt, sobald der Timetable da ist.',
+    'recap.leaderboard_seen': 'Meiste Artists gesehen',
+    'recap.leaderboard_hours':'Meiste Stunden auf der Fläche',
+    'recap.you':              'Du',
   },
 
   en: {
@@ -241,6 +260,7 @@ const TRANSLATIONS = {
     'nav.artists':   'Artists',
     'nav.timetable': 'Timetable',
     'nav.crew':      'Crew',
+    'nav.recap':     'Recap',
     'nav.help':      'Help',
     'nav.admin':     'Admin',
 
@@ -469,6 +489,24 @@ const TRANSLATIONS = {
     // Loading states
     'loading.artists': 'Loading artists...',
     'loading.generic': 'Loading...',
+
+    // Recap page
+    'recap.title':            'Your Recap',
+    'recap.seen':             'Seen',
+    'recap.rated':            'Rated',
+    'recap.favorites':        'Favorites',
+    'recap.post_rated':       'Post-rated',
+    'recap.hours_total':      'Hours on the floor',
+    'recap.by_day':           'By day',
+    'recap.by_stage':         'By stage',
+    'recap.rating_before':    'Before',
+    'recap.rating_after':     'After',
+    'recap.surprises':        'Biggest surprises',
+    'recap.no_surprises':     'No post-ratings to compare yet.',
+    'recap.no_time_data':     'No schedule data for this festival yet — hours/day/stage stats will show up once the timetable is in.',
+    'recap.leaderboard_seen': 'Most artists seen',
+    'recap.leaderboard_hours':'Most hours on the floor',
+    'recap.you':              'You',
   },
 };
 

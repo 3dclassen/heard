@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   './index.html',
   './timetable.html',
   './crew.html',
+  './recap.html',
   './admin.html',
   './help.html',
   './css/design-tokens.css',
@@ -23,6 +24,7 @@ const STATIC_ASSETS = [
   './js/sync.js',
   './js/admin.js',
   './js/crew.js',
+  './js/recap.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
