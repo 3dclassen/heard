@@ -11,6 +11,7 @@ import {
   cacheArtists, getCachedArtists,
   cacheRatings, getCachedRatings,
   cacheUsers, getCachedUsers,
+  cacheFestivals, getCachedFestivals,
   addPendingRating, syncPendingToFirebase,
   isOnline, onOnline, onOffline
 } from './sync.js';
@@ -288,12 +289,15 @@ function loadOfflineWithoutAuth() {
 
   // Synthetisches User-Objekt aus Cache
   state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
-  state.artists = getCachedArtists();
-  state.ratings = getCachedRatings();
-  state.users   = getCachedUsers();
+  state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
+  state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+  state.users     = getCachedUsers();
+  state.festivals = getCachedFestivals();
   showApp();
   render();
   openArtistFromDeepLink();
+  updateNavFestival();
+  renderStagePills();
   showToast(t('offline.banner'), 'error');
 }
 
@@ -308,12 +312,15 @@ $('btn-offline-login')?.addEventListener('click', async () => {
   if (ok) {
     const cached = getCachedUser();
     state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
-    state.artists = getCachedArtists();
-    state.ratings = getCachedRatings();
-    state.users   = getCachedUsers();
+    state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
+    state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+    state.users     = getCachedUsers();
+    state.festivals = getCachedFestivals();
     showApp();
     render();
     openArtistFromDeepLink();
+    updateNavFestival();
+    renderStagePills();
     showToast(randomQuote('offlineLoginSuccess'), 'success');
   } else {
     if (errorEl) errorEl.style.display = '';
@@ -445,6 +452,24 @@ function showPassphraseSetup() {
 // ── Firestore Listeners ──
 
 function startListeners() {
+  // Offline-Zweig: v.a. relevant nach einem Festival-Wechsel offline (switchFestival()
+  // ruft startListeners() erneut auf) — sonst würden hier live Firestore-Listener
+  // angehängt, die ohne Netz nie feuern, state.artists/ratings blieben leer und die
+  // Liste zeigt für immer "keine Artists" statt der gecachten Daten. Nach festival_id
+  // filtern, da der Cache immer nur den zuletzt online geladenen Stand hält — sonst
+  // könnten nach einem Wechsel versehentlich Artists des VORHERIGEN Festivals auftauchen.
+  if (!isOnline()) {
+    state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
+    state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+    state.users     = getCachedUsers();
+    state.festivals = getCachedFestivals();
+    render();
+    openArtistFromDeepLink();
+    updateNavFestival();
+    renderStagePills();
+    return;
+  }
+
   let artistsInitialLoaded = false;
 
   const u1 = onArtistsChange(state.activeFestivalId, artists => {
@@ -473,6 +498,7 @@ function startListeners() {
 
   const u4 = onFestivalsChange(festivals => {
     state.festivals = festivals;
+    cacheFestivals(festivals);
     updateNavFestival();
     renderStagePills();
   });
@@ -498,9 +524,10 @@ onOffline(() => {
 
 if (!isOnline()) {
   offlineBanner?.classList.add('visible');
-  state.artists = getCachedArtists();
-  state.ratings = getCachedRatings();
-  state.users   = getCachedUsers();
+  state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
+  state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+  state.users     = getCachedUsers();
+  state.festivals = getCachedFestivals();
   render();
   openArtistFromDeepLink();
 }
@@ -580,7 +607,17 @@ async function switchFestival(festivalId) {
   state.artists      = [];
   state.ratings      = [];
   saveFilterState();
-  await saveActiveFestival(state.user.uid, festivalId);
+  // saveActiveFestival() ist ein Firestore-Write — offline würde ein ungeprüftes await
+  // hier für immer hängen (oder werfen und den Rest der Funktion nie erreichen), genau
+  // wie der ensureUserProfile-Bug beim Login. Die Präferenz wird dann einfach erst beim
+  // nächsten Online-Sein nachgetragen; der Wechsel selbst funktioniert auch ohne das.
+  if (isOnline()) {
+    try {
+      await saveActiveFestival(state.user.uid, festivalId);
+    } catch (err) {
+      console.warn('[app] saveActiveFestival fehlgeschlagen, Wechsel läuft trotzdem weiter:', err);
+    }
+  }
   startListeners();
   render();
   closeFestivalPanel();

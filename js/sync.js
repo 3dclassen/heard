@@ -44,14 +44,18 @@ export function getCachedUsers() {
   } catch { return []; }
 }
 
-export function cacheFestival(festival) {
-  localStorage.setItem(KEYS.FESTIVAL, JSON.stringify(festival));
+// Cached war vorher nie tatsächlich verdrahtet (cacheFestival/getCachedFestival lagen
+// hier unbenutzt) — dadurch blieb state.festivals offline immer leer und der Festival-
+// Umschalter im Profil zeigte buchstäblich nichts an. Jetzt die ganze Liste cachen,
+// analog zu cacheArtists/getCachedArtists.
+export function cacheFestivals(festivals) {
+  localStorage.setItem(KEYS.FESTIVAL, JSON.stringify(festivals));
 }
 
-export function getCachedFestival() {
+export function getCachedFestivals() {
   try {
-    return JSON.parse(localStorage.getItem(KEYS.FESTIVAL) || 'null');
-  } catch { return null; }
+    return JSON.parse(localStorage.getItem(KEYS.FESTIVAL) || '[]');
+  } catch { return []; }
 }
 
 export function cacheCrew(crew) {
