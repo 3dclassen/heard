@@ -92,8 +92,8 @@ function setupNav() {
 function startListeners() {
   if (!isOnline()) {
     state.crew    = getCachedCrew();
-    state.artists = getCachedArtists();
-    state.ratings = getCachedRatings();
+    state.artists = getCachedArtists(state.activeFestivalId);
+    state.ratings = getCachedRatings(state.activeFestivalId);
     state.users   = getCachedUsers();
     render();
     return;

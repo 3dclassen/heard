@@ -291,8 +291,8 @@ function startListeners() {
     // aus index.html heraus gecacht, siehe sync.js) — vorher gab es hier gar keinen
     // Offline-Zweig, wodurch Crew-Sterne/-Kommentare offline nie sichtbar wurden.
     state.crew    = getCachedCrew();
-    state.artists = getCachedArtists();
-    state.ratings = getCachedRatings();
+    state.artists = getCachedArtists(state.activeFestivalId);
+    state.ratings = getCachedRatings(state.activeFestivalId);
     state.users   = getCachedUsers();
     render();
     return;

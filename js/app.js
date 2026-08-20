@@ -289,8 +289,8 @@ function loadOfflineWithoutAuth() {
 
   // Synthetisches User-Objekt aus Cache
   state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
-  state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
-  state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+  state.artists   = getCachedArtists(state.activeFestivalId);
+  state.ratings   = getCachedRatings(state.activeFestivalId);
   state.users     = getCachedUsers();
   state.festivals = getCachedFestivals();
   showApp();
@@ -312,8 +312,8 @@ $('btn-offline-login')?.addEventListener('click', async () => {
   if (ok) {
     const cached = getCachedUser();
     state.user = { uid: cached.uid, displayName: cached.displayName, email: cached.email, photoURL: cached.photoURL };
-    state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
-    state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+    state.artists   = getCachedArtists(state.activeFestivalId);
+    state.ratings   = getCachedRatings(state.activeFestivalId);
     state.users     = getCachedUsers();
     state.festivals = getCachedFestivals();
     showApp();
@@ -459,8 +459,8 @@ function startListeners() {
   // filtern, da der Cache immer nur den zuletzt online geladenen Stand hält — sonst
   // könnten nach einem Wechsel versehentlich Artists des VORHERIGEN Festivals auftauchen.
   if (!isOnline()) {
-    state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
-    state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+    state.artists   = getCachedArtists(state.activeFestivalId);
+    state.ratings   = getCachedRatings(state.activeFestivalId);
     state.users     = getCachedUsers();
     state.festivals = getCachedFestivals();
     render();
@@ -477,7 +477,7 @@ function startListeners() {
     artistsInitialLoaded = true;
     const countChanged = isUpdate && artists.length !== state.artists.length;
     state.artists = artists;
-    cacheArtists(artists);
+    cacheArtists(state.activeFestivalId, artists);
     render();
     openArtistFromDeepLink();
     if (countChanged) showToast(t('toast.lineup_updated'));
@@ -485,7 +485,7 @@ function startListeners() {
 
   const u2 = onRatingsChange(state.activeFestivalId, ratings => {
     state.ratings = ratings;
-    cacheRatings(ratings);
+    cacheRatings(state.activeFestivalId, ratings);
     render();
     if (state.openArtist) renderPanel(state.openArtist);
   });
@@ -524,8 +524,8 @@ onOffline(() => {
 
 if (!isOnline()) {
   offlineBanner?.classList.add('visible');
-  state.artists   = getCachedArtists().filter(a => a.festival_id === state.activeFestivalId);
-  state.ratings   = getCachedRatings().filter(r => r.festival_id === state.activeFestivalId);
+  state.artists   = getCachedArtists(state.activeFestivalId);
+  state.ratings   = getCachedRatings(state.activeFestivalId);
   state.users     = getCachedUsers();
   state.festivals = getCachedFestivals();
   render();
@@ -1112,13 +1112,13 @@ function renderPanel(artist) {
         await saveRating(data);
       } else {
         addPendingRating(data);
-        const cached = getCachedRatings();
+        const cached = getCachedRatings(data.festivalId);
         const id     = ratingId(data.userId, data.artistId);
         const idx    = cached.findIndex(r => r.id === id);
         const entry  = { id, user_id: data.userId, artist_id: data.artistId, festival_id: data.festivalId, rating: data.rating, comment: data.comment, listened: data.listened, want_to_see: data.want_to_see, seen: data.seen ?? false, post_rating: data.post_rating ?? 0, post_comment: data.post_comment ?? '' };
         if (idx >= 0) cached[idx] = entry; else cached.push(entry);
         state.ratings = cached;
-        cacheRatings(cached);
+        cacheRatings(data.festivalId, cached);
         showToast(t('toast.offline_saved'), 'success');
       }
 

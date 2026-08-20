@@ -12,26 +12,53 @@ const KEYS = {
 };
 
 // ── Lokaler Cache ──
+//
+// Artists/Ratings sind PRO FESTIVAL gecacht (Key-Suffix festivalId) — nicht mehr ein
+// einzelner globaler Slot. Sonst überschreibt jeder Festival-Wechsel (auch online!)
+// den Cache des vorherigen Festivals, und offline zu einem Festival zu wechseln, das
+// man vorher schon verlassen hat, zeigt fälschlich "keine Artists" statt der Daten
+// vom letzten Online-Besuch.
 
-export function cacheArtists(artists) {
-  localStorage.setItem(KEYS.ARTISTS, JSON.stringify(artists));
+function artistsKey(festivalId) { return `${KEYS.ARTISTS}_${festivalId}`; }
+function ratingsKey(festivalId) { return `${KEYS.RATINGS}_${festivalId}`; }
+
+export function cacheArtists(festivalId, artists) {
+  localStorage.setItem(artistsKey(festivalId), JSON.stringify(artists));
 }
 
-export function getCachedArtists() {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.ARTISTS) || '[]');
-  } catch { return []; }
+export function getCachedArtists(festivalId) {
+  const existing = localStorage.getItem(artistsKey(festivalId));
+  if (existing != null) {
+    try { return JSON.parse(existing); } catch { return []; }
+  }
+  return migrateLegacyCache(KEYS.ARTISTS, artistsKey(festivalId), festivalId);
 }
 
-export function cacheRatings(ratings) {
-  localStorage.setItem(KEYS.RATINGS, JSON.stringify(ratings));
+export function cacheRatings(festivalId, ratings) {
+  localStorage.setItem(ratingsKey(festivalId), JSON.stringify(ratings));
   localStorage.setItem(KEYS.SYNCED_AT, new Date().toISOString());
 }
 
-export function getCachedRatings() {
+export function getCachedRatings(festivalId) {
+  const existing = localStorage.getItem(ratingsKey(festivalId));
+  if (existing != null) {
+    try { return JSON.parse(existing); } catch { return []; }
+  }
+  return migrateLegacyCache(KEYS.RATINGS, ratingsKey(festivalId), festivalId);
+}
+
+// Einmalige Migration von der alten, nicht Festival-spezifischen Cache-Struktur: wenn
+// unter dem neuen Key noch nichts liegt, aber die alte globale Liste zufällig zu genau
+// diesem Festival gehört, in den neuen Key übernehmen statt sie beim Update zu verlieren.
+function migrateLegacyCache(legacyKey, newKey, festivalId) {
   try {
-    return JSON.parse(localStorage.getItem(KEYS.RATINGS) || '[]');
-  } catch { return []; }
+    const legacy = JSON.parse(localStorage.getItem(legacyKey) || '[]');
+    if (Array.isArray(legacy) && legacy.length > 0 && legacy[0]?.festival_id === festivalId) {
+      localStorage.setItem(newKey, JSON.stringify(legacy));
+      return legacy;
+    }
+  } catch { /* ignore */ }
+  return [];
 }
 
 export function cacheUsers(users) {
