@@ -139,7 +139,7 @@ function startListeners() {
     state.ratings = ratings;
     render();
   });
-  const u3 = onCrewChange(state.user.uid, crew => {
+  const u3 = onCrewChange(state.user.uid, state.activeFestivalId, crew => {
     state.crew = crew;
     if (state.viewMode === 'crew' && !isCrewViewAvailable()) state.viewMode = 'mine';
     render();

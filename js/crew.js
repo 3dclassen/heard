@@ -74,9 +74,9 @@ onAuthChange(async user => {
     // wenn dieses users/{uid}-Doc lokal noch nicht gecacht ist.
     state.userProfile = await ensureUserProfileOffline(user);
     state.activeFestivalId = state.userProfile?.active_festival_id || 'modem-2026';
-    // getOrCreateMyInviteCode() macht eine zusammengesetzte Query — hat offline ohne
-    // warmen Cache dasselbe Hänge-Risiko, daher hier ebenfalls überspringen.
-    state.myInviteCode = isOnline() ? await getOrCreateMyInviteCode(user.uid) : null;
+    // getOrCreateMyInviteCode() ist ein Firestore-Read — hat offline ohne warmen Cache
+    // dasselbe Hänge-Risiko, daher hier ebenfalls übersprungen.
+    state.myInviteCode = isOnline() ? await getOrCreateMyInviteCode(user.uid, state.activeFestivalId) : null;
   } catch (err) {
     console.error('[crew] onAuthChange Fehler:', err);
   }
@@ -168,7 +168,7 @@ $('btn-create-crew')?.addEventListener('click', async () => {
   btn.textContent = t('crew.creating');
 
   try {
-    await createCrew(state.user.uid, name);
+    await createCrew(state.user.uid, name, state.activeFestivalId);
     if (input) input.value = '';
     setFeedback('', '');
   } catch (err) {
@@ -299,7 +299,7 @@ function startListeners() {
     return;
   }
 
-  const u1 = onCrewChange(state.user.uid, crew => {
+  const u1 = onCrewChange(state.user.uid, state.activeFestivalId, crew => {
     state.crew         = crew;
     state.filterMember = null;
     cacheCrew(crew);
@@ -507,8 +507,11 @@ function renderCrewMatch() {
   const myIds = myCrewUserIds();
   // Zusätzlich zur state.crew.id auch Crews ausschließen, die den eigenen User
   // enthalten (Sicherheitsnetz gegen Mehrfach-Mitgliedschaften in alten/fehlerhaften Daten).
+  // Nur Crews desselben Festivals — sonst tauchen z.B. MODEM-Crews im MOYN-Vergleich auf.
   const otherCrews = state.allCrews.filter(c =>
-    c.id !== state.crew?.id && !(c.members || []).includes(state.user?.uid)
+    c.id !== state.crew?.id &&
+    !(c.members || []).includes(state.user?.uid) &&
+    c.festival_id === state.activeFestivalId
   );
 
   if (otherCrews.length === 0) {
@@ -722,8 +725,21 @@ async function switchFestival(festivalId) {
   state.ratings          = [];
   state.allCrews         = [];
   state.filterMember     = null;
+  // Invite-Code ist jetzt pro Festival — beim Wechsel neu holen (wurde vorher nur
+  // einmal beim Login gefetcht, dadurch würde sonst nach einem Wechsel weiterhin der
+  // Code des vorherigen Festivals angezeigt). Wie bei ensureUserProfileOffline: offline
+  // ohne warmen Cache könnte das hängen, also nur online versuchen.
+  state.myInviteCode = isOnline() ? await getOrCreateMyInviteCode(state.user.uid, festivalId) : null;
 
-  await saveActiveFestival(state.user.uid, festivalId);
+  // Selbes Muster: Präferenz-Write blockiert den Wechsel offline nicht mehr, wird
+  // einfach beim nächsten Online-Sein nachgetragen (siehe app.js switchFestival()).
+  if (isOnline()) {
+    try {
+      await saveActiveFestival(state.user.uid, festivalId);
+    } catch (err) {
+      console.warn('[crew] saveActiveFestival fehlgeschlagen, Wechsel läuft trotzdem weiter:', err);
+    }
+  }
   startListeners();
   render();
   closeFestivalPanel();

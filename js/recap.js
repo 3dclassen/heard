@@ -100,7 +100,7 @@ function startListeners() {
     return;
   }
 
-  const u1 = onCrewChange(state.user.uid, crew => {
+  const u1 = onCrewChange(state.user.uid, state.activeFestivalId, crew => {
     state.crew = crew;
     render();
   });

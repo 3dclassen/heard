@@ -253,8 +253,16 @@ export async function saveActiveCrew(uid, crewId) {
 
 // ── Crew (crew_connections + crew_invites) ──
 // Datenmodell:
-//   crew_invites/{CODE}  → creator_uid, persistent, used, created_at
-//   crew_connections/{id} → members[], name?, created_by?, created_at
+//   crew_invites/{CODE}  → creator_uid, persistent, used, created_at, festival_id
+//   crew_connections/{id} → members[], name?, created_by?, created_at, festival_id
+//
+// Crew ist pro Festival (festival_id) — man kann also gleichzeitig in einer Crew für
+// MODEM und einer anderen für MOYN sein. Bewusst KEINE zusammengesetzte Firestore-Query
+// mit festival_id im where() — das würde einen neuen Composite-Index brauchen, der beim
+// Deploy noch nicht existiert und alle Crew-Abfragen bis zur manuellen Index-Erstellung
+// in der Firebase Console brechen würde. Stattdessen bleibt die bestehende, bereits
+// funktionierende Einzelbedingung unverändert und die festival_id wird client-seitig
+// gefiltert (gleiches Muster wie onAllCrewsChange das schon immer macht).
 
 function generateCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -264,55 +272,58 @@ function generateCode() {
   return code;
 }
 
-export async function getOrCreateMyInviteCode(uid) {
-  const q = query(
-    collection(db, "crew_invites"),
-    where("creator_uid", "==", uid),
-    where("persistent", "==", true),
-  );
+export async function getOrCreateMyInviteCode(uid, festivalId) {
+  const q = query(collection(db, "crew_invites"), where("creator_uid", "==", uid));
   const snap = await getDocs(q);
-  if (!snap.empty) return snap.docs[0].id;
+  const existing = snap.docs.find(
+    (d) => d.data().persistent && d.data().festival_id === festivalId,
+  );
+  if (existing) return existing.id;
   const code = generateCode();
   await setDoc(doc(db, "crew_invites", code), {
     creator_uid: uid,
     persistent: true,
     used: false,
+    festival_id: festivalId,
     created_at: serverTimestamp(),
   });
   return code;
 }
 
-export function onCrewChange(uid, callback) {
+export function onCrewChange(uid, festivalId, callback) {
   const q = query(
     collection(db, "crew_connections"),
     where("members", "array-contains", uid),
   );
   return onSnapshot(
     q,
-    (snap) =>
-      callback(
-        snap.docs[0] ? { id: snap.docs[0].id, ...snap.docs[0].data() } : null,
-      ),
+    (snap) => {
+      const match = snap.docs.find((d) => d.data().festival_id === festivalId);
+      callback(match ? { id: match.id, ...match.data() } : null);
+    },
     (err) => console.error("[firebase] onCrewChange:", err.code),
   );
 }
 
-export async function createCrew(uid, name) {
+export async function createCrew(uid, name, festivalId) {
   const existing = await getDocs(
     query(
       collection(db, "crew_connections"),
       where("members", "array-contains", uid),
     ),
   );
-  if (!existing.empty) throw new Error("ALREADY_IN_CREW");
+  if (existing.docs.some((d) => d.data().festival_id === festivalId)) {
+    throw new Error("ALREADY_IN_CREW");
+  }
   const ref = doc(collection(db, "crew_connections"));
   await setDoc(ref, {
     name: name.trim(),
     members: [uid],
     created_by: uid,
+    festival_id: festivalId,
     created_at: serverTimestamp(),
   });
-  await getOrCreateMyInviteCode(uid);
+  await getOrCreateMyInviteCode(uid, festivalId);
   return ref.id;
 }
 
@@ -337,32 +348,39 @@ export async function joinCrewByCode(code, uid) {
   const invite = inviteSnap.data();
   if (invite.creator_uid === uid) throw new Error("CODE_OWN");
   if (invite.used && !invite.persistent) throw new Error("CODE_USED");
+  // Der Code entscheidet, welchem Festival man beitritt (nicht das aktuell aktive
+  // Festival des Beitretenden) — Alt-Codes ohne festival_id (sollte es nach der
+  // Migration nicht mehr geben) fallen sicherheitshalber auf modem-2026 zurück.
+  const festivalId = invite.festival_id ?? "modem-2026";
   const existingSnap = await getDocs(
     query(
       collection(db, "crew_connections"),
       where("members", "array-contains", uid),
     ),
   );
-  if (!existingSnap.empty) throw new Error("ALREADY_IN_CREW");
+  if (existingSnap.docs.some((d) => d.data().festival_id === festivalId)) {
+    throw new Error("ALREADY_IN_CREW");
+  }
   const creatorSnap = await getDocs(
     query(
       collection(db, "crew_connections"),
       where("members", "array-contains", invite.creator_uid),
     ),
   );
-  if (creatorSnap.empty) {
+  const creatorCrew = creatorSnap.docs.find((d) => d.data().festival_id === festivalId);
+  if (!creatorCrew) {
     const newRef = doc(collection(db, "crew_connections"));
     await setDoc(newRef, {
       name: await defaultCrewName(invite.creator_uid, uid),
       members: [invite.creator_uid, uid],
       created_by: invite.creator_uid,
+      festival_id: festivalId,
       created_at: serverTimestamp(),
     });
   } else {
-    const crewDoc = creatorSnap.docs[0];
-    const members = crewDoc.data().members || [];
+    const members = creatorCrew.data().members || [];
     if (members.includes(uid)) throw new Error("ALREADY_MEMBER");
-    await updateDoc(crewDoc.ref, { members: [...members, uid] });
+    await updateDoc(creatorCrew.ref, { members: [...members, uid] });
   }
   if (!invite.persistent) await updateDoc(inviteRef, { used: true });
 }
