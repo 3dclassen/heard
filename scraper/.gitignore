@@ -2,5 +2,6 @@ node_modules/
 service-account.json
 artists.json
 moyn-artists.json
+moyn-timetable-input.json
 backups/
 reports/

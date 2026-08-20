@@ -9,7 +9,9 @@
     "scrape:moyn": "node scrape-moyn.js",
     "scrape:moyn:dry": "node scrape-moyn.js --dry-run",
     "import:timetable:dry": "node import-timetable.js",
-    "import:timetable:write": "node import-timetable.js --write"
+    "import:timetable:write": "node import-timetable.js --write",
+    "import:moyn-timetable:dry": "node import-moyn-timetable.js",
+    "import:moyn-timetable:write": "node import-moyn-timetable.js --write --yes"
   },
   "dependencies": {
     "axios": "^1.7.0",
