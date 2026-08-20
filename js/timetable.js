@@ -10,6 +10,7 @@ import { myFavorites, crewFavorites, votersForArtist, getMyRating } from './rati
 import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 import { forceUpdate } from './sw-register.js';
+import { setupNavMenu } from './nav-menu.js';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = {
@@ -605,4 +606,5 @@ function escHtml(str) {
 
 applyTranslations();
 setupLangToggle();
+setupNavMenu();
 setupDaySwipe();

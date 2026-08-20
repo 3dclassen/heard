@@ -16,6 +16,7 @@ const STATIC_ASSETS = [
   './js/firebase.js',
   './js/app.js',
   './js/sw-register.js',
+  './js/nav-menu.js',
   './js/i18n.js',
   './js/help.js',
   './js/offline-auth.js',

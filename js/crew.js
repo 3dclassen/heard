@@ -17,6 +17,7 @@ import { sharedFavorites, ratingProgress } from './rating.js';
 import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 import { forceUpdate } from './sw-register.js';
+import { setupNavMenu } from './nav-menu.js';
 
 let state = {
   user:             null,
@@ -825,3 +826,4 @@ function esc(str) {
 
 applyTranslations();
 setupLangToggle();
+setupNavMenu();

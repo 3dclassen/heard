@@ -26,6 +26,7 @@ import {
 
 import { getLang, setLang, t, randomQuote as i18nRandomQuote, applyTranslations, setupLangToggle } from './i18n.js';
 import { forceUpdate } from './sw-register.js';
+import { setupNavMenu } from './nav-menu.js';
 
 // ── Konstante ──
 
@@ -1265,4 +1266,5 @@ profileBackdrop?.addEventListener('click', closeProfileModal);
 
 applyTranslations();
 setupLangToggle();
+setupNavMenu();
 render();

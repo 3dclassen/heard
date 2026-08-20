@@ -17,6 +17,7 @@ import {
   importArtists,
 } from "./firebase.js";
 import { t, applyTranslations, setupLangToggle } from "./i18n.js";
+import { setupNavMenu } from "./nav-menu.js";
 
 const FESTIVAL_ID = "modem-2026";
 
@@ -302,3 +303,4 @@ function showToast(msg, type = "") {
 
 applyTranslations();
 setupLangToggle();
+setupNavMenu();

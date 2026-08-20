@@ -14,6 +14,7 @@ import {
 import { personalRecap, crewRecap } from './rating.js';
 import { hasOfflineHash, ensureUserProfileOffline } from './offline-auth.js';
 import { forceUpdate } from './sw-register.js';
+import { setupNavMenu } from './nav-menu.js';
 import { t, applyTranslations, setupLangToggle } from './i18n.js';
 
 const DAY_LABELS = {
@@ -444,3 +445,4 @@ function escHtml(str) {
 
 applyTranslations();
 setupLangToggle();
+setupNavMenu();

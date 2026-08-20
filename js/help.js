@@ -1,6 +1,7 @@
 // ── HEARD — Hilfe-Seite (help.html) ──
 
 import { getLang, setLang, applyTranslations, setupLangToggle } from './i18n.js';
+import { setupNavMenu } from './nav-menu.js';
 
 const FAQ_EN = {
   'faq-q1':  'How do I switch the active festival?',
@@ -69,3 +70,4 @@ document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
 
 applyTranslations();
 applyFaqLang();
+setupNavMenu();
