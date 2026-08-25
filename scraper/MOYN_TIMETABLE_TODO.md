@@ -1,5 +1,22 @@
 # MOYN Timetable Import — Runbook für heute
 
+## Stand (24.08., zwei Flyer-Fotos verarbeitet)
+
+- **229 von 330 Artists** haben jetzt `stage`/`day`/`time_start`/`time_end` in Firestore.
+- **Gewächshaus (alle 4 Nächte) + Oase/Scapula (Do)** — 21 Artists, Zeiten **fest**, direkt vom Foto (jeder Act hatte eine explizite Uhrzeit dran).
+- **7 Bühnen von Flyer 2** (Jekke Jolle, Extravaganza Speziale, Wilde Hilde, Playground, Diskotheka, Magischer Bazar, Zentralbar) — 208 Artists, Zeiten **geschätzt** (1h-Slots ab 20:00 Do/Fr/Sa, 1,5h-Slots ab 15:00 So; Reihenfolge = Foto). Die beiden Afterhour-Fußzeilen (Wilde Hilde So, Magischer Bazar So) haben echte Zeiten, keine Schätzung.
+- `FESTIVAL_STAGE_LABELS['moyn-2026']` in `js/app.js` ist ergänzt — Stage-Badges zeigen jetzt schöne Namen statt roher IDs.
+- **Noch offen / nicht eingetragen:**
+  - **Dome-Bühne**: nur Ambient-Blöcke + Workshops (Yoga, Breathwork etc. — keine Namen zum Matchen) und 5 Sonntag-Live-Konzerte (Jan Benkest, Sacred Fool, Wahnschaffe, Tinie Creatures, Eskalin) — für die Konzerte hatte ich keine verlässliche Uhrzeit im Foto, absichtlich nicht geschätzt.
+  - **Outdoor Oase / Gewächshaus-Workshops tagsüber**: keine Uhrzeiten im Foto, keine DB-Matches zu erwarten (keine "Artists" im klassischen Sinn).
+  - **Performance/Kunst-Programm** (Moynege, Cozy, Auf dem Gelände, Am Festivaleingang, Secret Place — Kaddi Kippenberger, L'Exposition, Ohrenzirkus, Chapeau Club, Zeitraumgestalter, XStage, Dirrrty Bingo, Kalayo Fire Collective, Hummelrummel & Istari Varieté, Hit Happens, Sound und Gemüse, Daddy Loenslers Twister Opening, Luft-Varieté, Clara Hanzal & Phileas Fiorino, Livepainting with Hildescrime u.a.) — auf Wunsch komplett ausgelassen, da die meisten noch nicht in der DB sind und laut Daniel noch mehr Acts nachkommen. Eigener Durchgang, wenn die Liste steht.
+  - **10 unmatched aus Flyer 2** (nicht angelegt, nur im Report): Denis Keiner b2b Niko Kijewski, Matasten, Fonattack (solo, DB hat nur "Kronik b2b Fonattack"), Ben Glock, Isis Lutz (DB: "Isis"), Julez & Luk The Dude (DB: "Julez"), Timboletti, Aze49, Mirko Machine, Jekke Jolle Allstars.
+  - Aus dem Gewächshaus-Batch unmatched: "Dave Dinger" solo (DB: "Avocado & Dave Dinger" als Duo), "Phae (Ambient Set)" (DB: ")Phae"), "Honigkater" (komplett neu).
+  - Kaddi Kippenberger taucht **zweimal** auf: als roaming Kunst-Act *und* als regulärer Slot auf Playground Sa 22:00-23:00 (geschätzt) — der Playground-Slot ist mit drin, der Kunst-Act nicht.
+- **Wichtigste Annahme, die noch zu prüfen ist**: Jekke Jolle & Extravaganza Speziale haben laut Flyer 2 **keinen Freitag-Block** (keine Liste auf dem Foto) — angenommen, die beiden Bühnen sind freitags dark. Falls falsch: Freitag-Zeilen nachtragen.
+- Reports zu allen Runs liegen in `scraper/reports/`, Backups in `scraper/backups/` (beide gitignored, aber lokal vorhanden — der Report mit den `notes`-Feldern zeigt genau, welcher Eintrag geschätzt vs. fest ist).
+
+
 **An Claude, falls diese Session abgebrochen ist und du das hier frisch liest:**
 Daniel ist auf dem Weg zum MOYN Festival und schickt dir Fotos vom Timetable
 (Boards/Pläne vor Ort). Deine Aufgabe: daraus die Zeiten für die MOYN-Artists in

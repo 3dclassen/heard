@@ -33,7 +33,19 @@ import { setupNavMenu } from './nav-menu.js';
 const APP_VERSION = self.APP_VERSION;
 
 const FESTIVAL_STAGE_LABELS = {
-  'modem-2026': { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' }
+  'modem-2026': { hive: 'The Hive', swamp: 'The Swamp', seed: 'The Seed' },
+  'moyn-2026': {
+    main: 'Main',
+    'outdoor-oase': 'Outdoor Oase',
+    gewaechshaus: 'Gewächshaus',
+    'jekke-jolle': 'Jekke Jolle',
+    'extravaganza-speziale': 'Extravaganza Speziale',
+    'wilde-hilde': 'Wilde Hilde',
+    playground: 'Playground',
+    diskotheka: 'Diskotheka',
+    'magischer-bazar': 'Magischer Bazar',
+    zentralbar: 'Zentralbar',
+  }
 };
 
 const FESTIVAL_TEMPLATES = [
